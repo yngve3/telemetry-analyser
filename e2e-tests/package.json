@@ -1,0 +1,15 @@
+{
+  "name": "telemetry-analyser-e2e-tests",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:backend": "playwright test --project=backend",
+    "test:viewer": "playwright test --project=viewer",
+    "install:browsers": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.44.0"
+  }
+}

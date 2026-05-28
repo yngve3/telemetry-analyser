@@ -1,0 +1,2 @@
+"""Snapshot telemetry source domain."""
+

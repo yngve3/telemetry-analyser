@@ -1,0 +1,2 @@
+"""Shared contract validation adapters."""
+

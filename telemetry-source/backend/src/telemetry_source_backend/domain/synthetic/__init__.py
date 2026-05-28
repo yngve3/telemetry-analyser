@@ -1,0 +1,2 @@
+"""Synthetic telemetry generation domain."""
+

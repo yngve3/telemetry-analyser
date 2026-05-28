@@ -1,0 +1,82 @@
+services:
+  analysis-service:
+    build:
+      context: .
+      dockerfile: analysis-service/Dockerfile
+    image: analysis-service:local
+    container_name: analysis-service-dev
+    ports:
+      - "8010:8010"
+      - "14560:14560/udp"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/health', timeout=2)",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  telemetry-source-backend:
+    build:
+      context: .
+      dockerfile: telemetry-source/backend/Dockerfile
+    image: telemetry-source-backend:local
+    container_name: telemetry-source-backend-dev
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  telemetry-source-frontend:
+    image: node:24-alpine
+    container_name: telemetry-source-frontend-dev
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
+    environment:
+      VITE_DEV_API_PROXY_TARGET: http://telemetry-source-backend:8000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./telemetry-source/frontend:/app
+      - telemetry-source-frontend-node-modules:/app/node_modules
+    depends_on:
+      telemetry-source-backend:
+        condition: service_healthy
+
+  telemetry-viewer:
+    image: node:24-alpine
+    container_name: telemetry-viewer-dev
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
+    environment:
+      VITE_DEV_ANALYSIS_API_PROXY_TARGET: http://analysis-service:8010
+      VITE_DEV_TELEMETRY_SOURCE_API_PROXY_TARGET: http://telemetry-source-backend:8000
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./telemetry-viewer/frontend:/app
+      - telemetry-viewer-node-modules:/app/node_modules
+    depends_on:
+      analysis-service:
+        condition: service_healthy
+      telemetry-source-backend:
+        condition: service_healthy
+
+volumes:
+  telemetry-source-frontend-node-modules:
+  telemetry-viewer-node-modules:

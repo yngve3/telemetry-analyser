@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://telemetry-analyser.local/schemas/telemetry.schema.json",
+  "title": "UnifiedTelemetry",
+  "description": "Unified telemetry object exchanged between integration modules and the analysis module.",
+  "type": "object",
+  "required": [
+    "timestamp",
+    "drone_id",
+    "latitude_deg",
+    "longitude_deg",
+    "altitude_m",
+    "battery_percent",
+    "satellites"
+  ],
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "drone_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "latitude_deg": {
+      "type": "number",
+      "minimum": -90,
+      "maximum": 90
+    },
+    "longitude_deg": {
+      "type": "number",
+      "minimum": -180,
+      "maximum": 180
+    },
+    "altitude_m": {
+      "type": "number"
+    },
+    "battery_percent": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "satellites": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "ground_speed_m_s": {
+      "type": "number",
+      "minimum": 0
+    },
+    "vertical_speed_m_s": {
+      "type": "number"
+    },
+    "heading_deg": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 360
+    },
+    "relative_altitude_m": {
+      "type": "number"
+    },
+    "velocity_x_m_s": {
+      "type": "number"
+    },
+    "velocity_y_m_s": {
+      "type": "number"
+    },
+    "velocity_z_m_s": {
+      "type": "number"
+    },
+    "roll_rad": {
+      "type": "number"
+    },
+    "pitch_rad": {
+      "type": "number"
+    },
+    "yaw_rad": {
+      "type": "number"
+    },
+    "roll_rate_rad_s": {
+      "type": "number"
+    },
+    "pitch_rate_rad_s": {
+      "type": "number"
+    },
+    "yaw_rate_rad_s": {
+      "type": "number"
+    },
+    "satellites_visible": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "gps_fix_type": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 6
+    },
+    "gps_eph": {
+      "type": "number",
+      "minimum": 0
+    },
+    "gps_epv": {
+      "type": "number",
+      "minimum": 0
+    },
+    "battery_voltage_v": {
+      "type": "number",
+      "minimum": 0
+    },
+    "battery_current_a": {
+      "type": "number",
+      "minimum": 0
+    },
+    "system_status": {
+      "type": "string",
+      "minLength": 1
+    },
+    "flight_mode": {
+      "type": "string",
+      "minLength": 1
+    },
+    "armed": {
+      "type": "boolean"
+    },
+    "sensor_health_flags": {
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "additionalProperties": false
+}

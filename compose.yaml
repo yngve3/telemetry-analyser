@@ -1,0 +1,6 @@
+name: telemetry-analyser
+
+include:
+  - ./telemetry-source/compose.yaml
+  - ./analysis-service/compose.yaml
+  - ./telemetry-viewer/compose.yaml

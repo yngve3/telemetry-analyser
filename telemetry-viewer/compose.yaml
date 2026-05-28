@@ -1,0 +1,14 @@
+services:
+  telemetry-viewer:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: telemetry-viewer:local
+    container_name: telemetry-viewer
+    ports:
+      - "3001:80"
+    depends_on:
+      analysis-service:
+        condition: service_healthy
+      telemetry-source-backend:
+        condition: service_healthy

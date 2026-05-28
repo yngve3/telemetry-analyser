@@ -1,0 +1,212 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://telemetry-analyser.local/schemas/anomaly-result.schema.json",
+  "title": "AnomalyResult",
+  "description": "Pipeline result produced by the analysis module for a telemetry sample.",
+  "type": "object",
+  "required": [
+    "drone_id",
+    "telemetry_timestamp",
+    "has_anomalies",
+    "anomalies",
+    "detector_outputs"
+  ],
+  "properties": {
+    "drone_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "telemetry_timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "has_anomalies": {
+      "type": "boolean"
+    },
+    "anomalies": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/aggregated_anomaly"
+      }
+    },
+    "detector_outputs": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/detector_output"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "anomaly_type": {
+      "type": "string",
+      "enum": [
+        "GPS_SIGNAL_LOSS",
+        "GPS_SPOOFING",
+        "IMU_SPIKE",
+        "BATTERY_DROP",
+        "LOW_BATTERY",
+        "IMPOSSIBLE_ALTITUDE",
+        "TELEMETRY_FREEZE",
+        "TELEMETRY_GAP",
+        "MOTION_INCONSISTENCY",
+        "ANOMALOUS_BEHAVIOR"
+      ]
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "INFO",
+        "WARNING",
+        "CRITICAL"
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": {
+        "type": [
+          "string",
+          "number",
+          "integer",
+          "boolean",
+          "null"
+        ]
+      }
+    },
+    "anomaly_source": {
+      "type": "object",
+      "required": [
+        "detector",
+        "confidence",
+        "evidence"
+      ],
+      "properties": {
+        "detector": {
+          "type": "string",
+          "minLength": 1
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        },
+        "severity": {
+          "$ref": "#/$defs/severity"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "aggregated_anomaly": {
+      "type": "object",
+      "required": [
+        "type",
+        "severity",
+        "message",
+        "confidence",
+        "sources"
+      ],
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/anomaly_type"
+        },
+        "severity": {
+          "$ref": "#/$defs/severity"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/anomaly_source"
+          }
+        },
+        "detector_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        }
+      },
+      "additionalProperties": false
+    },
+    "detected_anomaly": {
+      "type": "object",
+      "required": [
+        "type",
+        "severity",
+        "message",
+        "confidence",
+        "detector_name",
+        "evidence"
+      ],
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/anomaly_type"
+        },
+        "severity": {
+          "$ref": "#/$defs/severity"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "detector_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence": {
+          "$ref": "#/$defs/evidence"
+        }
+      },
+      "additionalProperties": false
+    },
+    "detector_output": {
+      "type": "object",
+      "required": [
+        "status",
+        "anomalies"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "ready",
+            "not_ready"
+          ]
+        },
+        "message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "anomalies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/detected_anomaly"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

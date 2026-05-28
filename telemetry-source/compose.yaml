@@ -1,0 +1,33 @@
+services:
+  telemetry-source-backend:
+    build:
+      context: ..
+      dockerfile: telemetry-source/backend/Dockerfile
+    image: telemetry-source-backend:local
+    container_name: telemetry-source-backend
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  telemetry-source-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: telemetry-source-frontend:local
+    container_name: telemetry-source-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      telemetry-source-backend:
+        condition: service_healthy
