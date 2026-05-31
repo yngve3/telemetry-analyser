@@ -26,6 +26,8 @@ Stable public imports are kept in `analysis_module.__init__`:
 - `AnomalyType`
 - `Severity`
 - `AnalysisContext`
+- `CauseDiagnosis`
+- `CauseDiagnosisLayer`
 - `DetectorKind`
 - `DetectorOutput`
 - `DetectorStatus`
@@ -35,8 +37,9 @@ Stable public imports are kept in `analysis_module.__init__`:
 - `create_default_analyzer()`
 - `create_rule_based_analyzer()`
 - `create_rule_based_detector()`
-- `create_ml_detector()`
-- `create_neural_network_detector()`
+- `create_correlation_based_detector()`
+- `create_isolation_forest_detector()`
+- `create_autoencoder_detector()`
 - `create_detectors()`
 - `create_analyzer()`
 
@@ -55,7 +58,7 @@ Analyzers implement a simple application-layer contract:
 Simple library usage:
 
 ```text
-UnifiedTelemetry -> analyzer-owned history/window -> detectors -> AnomalyResult
+UnifiedTelemetry -> analyzer-owned history/window -> detectors -> aggregation -> diagnosis -> AnomalyResult
 ```
 
 Service orchestration usage:
@@ -92,20 +95,31 @@ Each detected anomaly contains `confidence`, `detector_name`, and detector-speci
 `evidence`.
 
 Final pipeline anomalies are grouped by `AnomalyType`. Their `sources` show which
-detectors contributed evidence to the aggregate anomaly.
+detectors contributed evidence to the aggregate anomaly. The diagnostic layer
+adds `probable_cause`, `cause_confidence`, `diagnostic_evidence`, and
+`recommended_action`.
 
 ## Detector Families
 
-The library exposes three detector families for service-level enable/disable logic:
+The library exposes deterministic rules and an extensible model-based detector
+family for service-level enable/disable logic:
 
 - `rule_based` - fully implemented deterministic rules;
-- `ml` - scoring detector placeholder for future classical ML artifacts;
-- `nn` / `nn_autoencoder` - scoring detector placeholder for future neural-network artifacts.
+- `correlation_based` - cross-channel checks over temporal dynamics and
+  relationships between telemetry parameters;
+- `isolation_forest` - trainable baseline fitted on a recent normal-behavior
+  feature window;
+- `autoencoder` - reconstruction-error detector exposed as one pluggable
+  model-based detector.
 
-ML/NN placeholders use the same `TelemetryDetector` contract. Enabling `ml` or
-`nn` without an artifact path is rejected by the factory. When they detect a
-model-only anomaly without a concrete domain type, they return
+All non-rule detectors use `DetectorKind.MODEL_BASED`. The library does not
+position classical ML and neural networks as separate analysis levels; they are
+concrete implementations under the same model-based extension point. When a
+model-based detector finds an anomaly without a concrete domain type, it returns
 `ANOMALOUS_BEHAVIOR`.
+
+`GraphBasedDetector` is a documented extension point for future relationship
+models, not part of the current implementation.
 
 Unknown detector names are rejected by `create_detectors()` with
 `DetectorConfigurationError`.
@@ -117,9 +131,9 @@ the model contract and must not change without a feature version bump.
 
 ## Model Artifact Contract
 
-The model-based layer validates artifact packages but does not load PyTorch or
-sklearn models yet. A future artifact package must use either a directory or a zip
-file with this structure:
+The model-based layer validates artifact packages but does not require PyTorch or
+sklearn at runtime. A future artifact package must use either a directory or a
+zip file with this structure:
 
 ```text
 autoencoder_artifact/
@@ -156,7 +170,12 @@ autoencoder_artifact/
     "delta_altitude_m",
     "delta_battery_percent",
     "delta_heading_deg",
-    "elapsed_sec"
+    "elapsed_sec",
+    "attitude_age_ms",
+    "position_age_ms",
+    "gps_age_ms",
+    "system_age_ms",
+    "message_quality"
   ],
   "created_at": "2026-05-24T00:00:00Z"
 }
@@ -164,6 +183,13 @@ autoencoder_artifact/
 
 `feature_names` must exactly match the stable order emitted by
 `TelemetryFeatureExtractor`.
+
+When no `model_artifact_path` is provided, the autoencoder detector also checks
+for `analysis-module/models/autoencoder` and
+`analysis-module/models/autoencoder.zip`. The current artifact-backed runtime is
+a placeholder scoring adapter: it validates the artifact and uses its threshold
+and metadata through the neural model interface. Real model inference can be
+added behind that interface without changing the analyzer API.
 
 ## Documentation
 

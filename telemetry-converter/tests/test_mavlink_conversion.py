@@ -52,6 +52,11 @@ class MavlinkConversionTest(unittest.TestCase):
         self.assertEqual(telemetry.system_status, "active")
         self.assertEqual(telemetry.flight_mode, "auto")
         self.assertTrue(telemetry.armed)
+        self.assertEqual(telemetry.attitude_age_ms, 0)
+        self.assertEqual(telemetry.position_age_ms, 0)
+        self.assertEqual(telemetry.gps_age_ms, 0)
+        self.assertEqual(telemetry.system_age_ms, 0)
+        self.assertEqual(telemetry.message_quality, 1.0)
 
     def test_converts_mavlink_stream_to_contract_dict(self) -> None:
         stream = MavlinkTelemetryEncoder(system_id=1, component_id=1).encode(
@@ -127,6 +132,8 @@ class MavlinkConversionTest(unittest.TestCase):
         self.assertAlmostEqual(position_output.latitude_deg, 47.5)
         self.assertAlmostEqual(position_output.yaw_rad or 0.0, 1.75, places=4)
         self.assertEqual(position_output.battery_percent, 90.0)
+        self.assertIsNotNone(position_output.position_age_ms)
+        self.assertIsNotNone(position_output.message_quality)
 
         status_sample = self._sample(
             timestamp=datetime(2026, 5, 20, 12, 0, 0, 200_000, tzinfo=UTC),

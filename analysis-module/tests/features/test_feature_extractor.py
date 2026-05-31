@@ -34,6 +34,11 @@ class TelemetryFeatureExtractorTest(unittest.TestCase):
                 "delta_battery_percent",
                 "delta_heading_deg",
                 "elapsed_sec",
+                "attitude_age_ms",
+                "position_age_ms",
+                "gps_age_ms",
+                "system_age_ms",
+                "message_quality",
             ),
         )
 
@@ -61,6 +66,7 @@ class TelemetryFeatureExtractorTest(unittest.TestCase):
         self.assertEqual(values["delta_battery_percent"], -2.0)
         self.assertEqual(values["delta_heading_deg"], 20.0)
         self.assertEqual(values["elapsed_sec"], 2.0)
+        self.assertEqual(values["message_quality"], 1.0)
 
 
 if __name__ == "__main__":

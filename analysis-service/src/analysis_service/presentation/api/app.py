@@ -19,6 +19,7 @@ from analysis_service.presentation.api.routes.health import router as health_rou
 from analysis_service.presentation.api.routes.listeners import (
     router as listeners_router,
 )
+from analysis_service.presentation.api.routes.models import router as models_router
 from analysis_service.presentation.api.routes.profile import router as profile_router
 from analysis_service.presentation.api.routes.sessions import router as sessions_router
 from analysis_service.settings import Settings
@@ -44,6 +45,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(health_router)
     app.include_router(profile_router)
+    app.include_router(models_router)
     app.include_router(detectors_router)
     app.include_router(sessions_router)
     app.include_router(listeners_router)

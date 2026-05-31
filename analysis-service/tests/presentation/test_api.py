@@ -46,30 +46,118 @@ class AnalysisServiceApiTest(unittest.TestCase):
         self.assertEqual(openapi_response.status_code, 200)
         self.assertEqual(openapi_response.json()["info"]["title"], "Analysis Service")
 
-    def test_detector_discovery_lists_supported_detectors(self) -> None:
+    def test_model_discovery_lists_supported_models(self) -> None:
+        response = self.client.get("/analysis/models")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        names = [item["name"] for item in payload["models"]]
+        self.assertEqual(
+            names,
+            [
+                "rule_based",
+                "correlation_based",
+                "isolation_forest",
+                "autoencoder",
+                "graph_based",
+            ],
+        )
+        statuses = {item["name"]: item["status"] for item in payload["models"]}
+        self.assertEqual(statuses["rule_based"], "available")
+        self.assertEqual(statuses["correlation_based"], "available")
+        self.assertEqual(statuses["isolation_forest"], "available")
+        self.assertEqual(statuses["autoencoder"], "available")
+        self.assertEqual(statuses["graph_based"], "planned")
+
+    def test_detector_discovery_alias_uses_model_registry(self) -> None:
         response = self.client.get("/analysis/detectors")
 
         self.assertEqual(response.status_code, 200)
         names = [item["name"] for item in response.json()["detectors"]]
-        self.assertEqual(names, ["rule_based", "ml", "nn_autoencoder"])
+        self.assertEqual(
+            names,
+            [
+                "rule_based",
+                "correlation_based",
+                "isolation_forest",
+                "autoencoder",
+                "graph_based",
+            ],
+        )
 
-    def test_profile_rejects_unknown_detector(self) -> None:
+    def test_model_profile_discovery_lists_readiness(self) -> None:
+        response = self.client.get("/analysis/model-profiles")
+
+        self.assertEqual(response.status_code, 200)
+        profiles = {item["name"]: item for item in response.json()["profiles"]}
+        self.assertEqual(
+            list(profiles),
+            [
+                "rules_only",
+                "rules_with_correlation",
+                "rules_with_isolation_forest",
+                "full_hybrid",
+            ],
+        )
+        self.assertEqual(profiles["rules_only"]["status"], "available")
+        self.assertEqual(
+            profiles["rules_with_correlation"]["status"],
+            "available",
+        )
+        self.assertEqual(
+            profiles["rules_with_correlation"]["unavailable_models"],
+            [],
+        )
+        self.assertEqual(
+            profiles["rules_with_isolation_forest"]["status"],
+            "available",
+        )
+        self.assertEqual(
+            profiles["rules_with_isolation_forest"]["unavailable_models"],
+            [],
+        )
+        self.assertEqual(
+            profiles["full_hybrid"]["status"],
+            "available",
+        )
+        self.assertEqual(
+            profiles["full_hybrid"]["unavailable_models"],
+            [],
+        )
+
+    def test_profile_rejects_unknown_model(self) -> None:
         response = self.client.put(
             "/analysis/profile",
-            json={"enabled_detectors": ["unknown"]},
+            json={"enabled_models": ["unknown"]},
         )
 
         self.assertEqual(response.status_code, 422)
-        self.assertIn("Unknown detector", response.json()["detail"])
+        self.assertIn("Unknown analysis model", response.json()["detail"])
 
-    def test_profile_rejects_empty_detector_list(self) -> None:
+    def test_profile_rejects_empty_model_list(self) -> None:
         response = self.client.put(
             "/analysis/profile",
-            json={"enabled_detectors": []},
+            json={"enabled_models": []},
         )
 
         self.assertEqual(response.status_code, 422)
-        self.assertIn("At least one detector", response.json()["detail"])
+        self.assertIn("At least one analysis model", response.json()["detail"])
+
+    def test_profile_accepts_connected_model_profile(self) -> None:
+        response = self.client.put(
+            "/analysis/profile",
+            json={"model_profile": "rules_with_correlation"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["enabled_models"],
+            ["rule_based", "correlation_based"],
+        )
+        self.assertEqual(
+            response.json()["enabled_detectors"],
+            ["rule_based", "correlation_based"],
+        )
 
     def test_session_can_be_created_read_and_deleted(self) -> None:
         create_response = self.client.post(
@@ -78,6 +166,14 @@ class AnalysisServiceApiTest(unittest.TestCase):
         )
         self.assertEqual(create_response.status_code, 201)
         self.assertEqual(create_response.json()["session_id"], "uav-001")
+        self.assertEqual(
+            create_response.json()["profile"]["model_profile"],
+            "rules_only",
+        )
+        self.assertEqual(
+            create_response.json()["profile"]["enabled_models"],
+            ["rule_based"],
+        )
 
         get_response = self.client.get("/analysis/sessions/uav-001")
         self.assertEqual(get_response.status_code, 200)
@@ -298,17 +394,46 @@ class AnalysisServiceApiTest(unittest.TestCase):
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             sock.bind(("127.0.0.1", port))
 
-    def test_ml_without_artifact_is_rejected_during_session_creation(self) -> None:
+    def test_model_profile_controls_detector_outputs(self) -> None:
+        create_response = self.client.post(
+            "/analysis/sessions",
+            json={
+                "session_id": "hybrid",
+                "profile": {"model_profile": "full_hybrid"},
+            },
+        )
+        self.assertEqual(create_response.status_code, 201)
+
+        response = self.client.post(
+            "/analysis/sessions/hybrid/analyze",
+            json={
+                "format": "unified.telemetry",
+                "telemetry": _telemetry_payload(),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            list(response.json()["detector_outputs"]),
+            [
+                "rule_based",
+                "correlation_based",
+                "isolation_forest",
+                "autoencoder",
+            ],
+        )
+
+    def test_planned_model_is_rejected_during_session_creation(self) -> None:
         response = self.client.post(
             "/analysis/sessions",
             json={
-                "session_id": "ml",
-                "profile": {"enabled_detectors": ["ml"]},
+                "session_id": "graph",
+                "profile": {"enabled_models": ["graph_based"]},
             },
         )
 
         self.assertEqual(response.status_code, 422)
-        self.assertIn("requires a model artifact path", response.json()["detail"])
+        self.assertIn("graph_based", response.json()["detail"])
 
     def _wait_for_listener_status(self, listener_id: str, target_status: str):
         response = self.client.get(f"/analysis/listeners/{listener_id}")

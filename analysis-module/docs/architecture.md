@@ -7,7 +7,7 @@
 - `domain` - telemetry, anomaly, severity, and result models;
 - `application` - analyzer contract, configuration, factories, and result aggregation;
 - `features` - bounded telemetry history and stable feature extraction;
-- `detectors` - deterministic rules and future model-based scoring adapter;
+- `detectors` - deterministic rules and model-based detector implementations;
 - `infrastructure` - filesystem model artifact loading.
 
 ## Runtime Flow
@@ -18,6 +18,7 @@ UnifiedTelemetry
 -> AnalysisContext
 -> enabled TelemetryDetector implementations
 -> ResultAggregator
+-> CauseDiagnosisLayer
 -> AnomalyResult
 ```
 
@@ -30,17 +31,38 @@ profiles, and input conversion. Detector orchestration and aggregation stay in
 `UnifiedTelemetry`, and receives one `AnomalyResult` containing both aggregated
 `anomalies` and raw `detector_outputs`.
 
+The module owns result aggregation and probable-cause enrichment. The service
+does not merge detector findings. It only selects a profile, calls the analyzer,
+and returns the module-produced result.
+
 ## Detector Families
 
 - `rule_based` - deterministic rules implemented in this module;
-- `ml` - prepared scoring detector contract for classical ML artifacts;
-- `nn` - prepared scoring detector contract for neural-network artifacts.
+- `model_based` - extensible family for concrete model detectors.
 
-The ML and NN detectors are placeholders until real model loaders are added. They
-share the same `TelemetryScoringModel` contract. Enabling `ml` or `nn` without an
-artifact path is rejected by the factory. When a model score is above threshold
-without a more specific domain anomaly type, the detector returns
-`ANOMALOUS_BEHAVIOR`.
+Implemented model-based detectors:
+
+- `correlation_based` - analyzes temporal dynamics and relationships between
+  telemetry channels;
+- `isolation_forest` - fits an Isolation Forest baseline to a recent feature
+  window;
+- `autoencoder` - reports reconstruction-error anomalies as a pluggable
+  model-based detector.
+
+The autoencoder detector can run without an artifact by using the built-in
+reconstruction baseline. If `model_artifact_path` points to a valid artifact, or
+an artifact is present under `analysis-module/models/autoencoder(.zip)`, the
+detector uses the artifact-backed scoring interface. The artifact layout is
+documented in `analysis-module/models/README.md`.
+
+Graph-based models are a future extension point. They are documented here to keep
+the architecture open for parameter-relationship analysis without adding a heavy
+graph implementation to the current version.
+
+Classical ML and neural-network models are not separate analyzer levels. They are
+concrete detector implementations under `DetectorKind.MODEL_BASED`. If a
+model-based detector cannot classify an anomaly as a concrete domain type, it
+returns `ANOMALOUS_BEHAVIOR`.
 
 ## Boundary
 

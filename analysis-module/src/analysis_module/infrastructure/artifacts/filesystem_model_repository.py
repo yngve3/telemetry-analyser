@@ -9,14 +9,14 @@ from pathlib import Path
 from typing import Any
 from zipfile import ZipFile
 
-from analysis_module.detectors.model_based.interfaces import (
-    NoOpTelemetryScoringModel,
-    TelemetryScoringModel,
-)
+from analysis_module.detectors.model_based.interfaces import TelemetryScoringModel
 from analysis_module.detectors.model_based.model_artifact import (
     ModelArtifact,
     ModelArtifactError,
     parse_model_artifact,
+)
+from analysis_module.detectors.model_based.neural_models import (
+    AutoencoderArtifactScoringModel,
 )
 from analysis_module.features.feature_extractor import TelemetryFeatureExtractor
 
@@ -40,7 +40,7 @@ class FilesystemModelArtifactRepository:
                 "Model artifact path must be a directory or a .zip file."
             )
 
-        return NoOpTelemetryScoringModel(
+        return AutoencoderArtifactScoringModel(
             threshold=artifact.threshold,
             metadata=artifact.metadata.to_dict(),
         )

@@ -162,6 +162,11 @@ class SyntheticTelemetryFactory:
             sensor_health_flags=sample.sensor_health_flags
             if sample.sensor_health_flags is not None
             else 0xFFFFFFFF,
+            attitude_age_ms=sample.attitude_age_ms,
+            position_age_ms=sample.position_age_ms,
+            gps_age_ms=sample.gps_age_ms,
+            system_age_ms=sample.system_age_ms,
+            message_quality=sample.message_quality,
         )
 
     def _yaw_rate_rad_s(

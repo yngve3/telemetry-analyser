@@ -29,6 +29,11 @@ export type TelemetryPayload = {
   flight_mode?: string | null;
   armed?: boolean | null;
   sensor_health_flags?: number | null;
+  attitude_age_ms?: number | null;
+  position_age_ms?: number | null;
+  gps_age_ms?: number | null;
+  system_age_ms?: number | null;
+  message_quality?: number | null;
 };
 
 export const sampleTelemetryPayload: TelemetryPayload = {
@@ -56,6 +61,11 @@ export const sampleTelemetryPayload: TelemetryPayload = {
   flight_mode: "auto",
   armed: true,
   sensor_health_flags: 4294967295,
+  attitude_age_ms: 20,
+  position_age_ms: 100,
+  gps_age_ms: 200,
+  system_age_ms: 1000,
+  message_quality: 0.98,
 };
 
 export function parseTelemetryPayload(text: string): TelemetryPayload {

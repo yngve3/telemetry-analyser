@@ -49,6 +49,11 @@ def telemetry_sample_to_contract_dict(sample: TelemetrySample) -> dict[str, Any]
         "flight_mode": sample.flight_mode,
         "armed": sample.armed,
         "sensor_health_flags": sample.sensor_health_flags,
+        "attitude_age_ms": sample.attitude_age_ms,
+        "position_age_ms": sample.position_age_ms,
+        "gps_age_ms": sample.gps_age_ms,
+        "system_age_ms": sample.system_age_ms,
+        "message_quality": sample.message_quality,
     }
     payload.update(
         {
@@ -119,6 +124,11 @@ class TelemetryContractValidator:
         self._validate_string(payload, "flight_mode", min_length=1, required=False)
         self._validate_boolean(payload, "armed", required=False)
         self._validate_integer(payload, "sensor_health_flags", minimum=0, required=False)
+        self._validate_integer(payload, "attitude_age_ms", minimum=0, required=False)
+        self._validate_integer(payload, "position_age_ms", minimum=0, required=False)
+        self._validate_integer(payload, "gps_age_ms", minimum=0, required=False)
+        self._validate_integer(payload, "system_age_ms", minimum=0, required=False)
+        self._validate_number(payload, "message_quality", minimum=0, maximum=1, required=False)
 
     def _validate_string(
         self,

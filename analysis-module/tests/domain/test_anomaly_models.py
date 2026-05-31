@@ -23,16 +23,27 @@ class AnomalyModelsTest(unittest.TestCase):
             message="GPS jump.",
             confidence=0.86,
             source="rule_based",
+            detector_kind="rule_based",
             detector_name="GpsSpoofingRule",
             affected_fields=("latitude_deg", "longitude_deg"),
             evidence={"distance_delta_m": 130.4},
+            probable_cause="Reported speed does not explain the position jump.",
         )
 
         self.assertEqual(anomaly.confidence, 0.86)
         self.assertEqual(anomaly.source, "rule_based")
+        self.assertEqual(anomaly.detector_kind, "rule_based")
         self.assertEqual(anomaly.detector_name, "GpsSpoofingRule")
         self.assertEqual(anomaly.affected_fields, ("latitude_deg", "longitude_deg"))
+        self.assertEqual(
+            anomaly.affected_parameters,
+            ("latitude_deg", "longitude_deg"),
+        )
         self.assertEqual(anomaly.evidence["distance_delta_m"], 130.4)
+        self.assertEqual(
+            anomaly.probable_cause,
+            "Reported speed does not explain the position jump.",
+        )
 
     def test_result_reports_anomaly_presence_and_detector_outputs(self) -> None:
         sample = telemetry()
@@ -111,7 +122,9 @@ class AnomalyModelsTest(unittest.TestCase):
         self.assertEqual(payload["has_anomalies"], True)
         self.assertIn("rule_based", payload["detector_outputs"])
         self.assertEqual(payload["anomalies"][0]["source"], "rule_based")
+        self.assertEqual(payload["anomalies"][0]["detector_kind"], "rule_based")
         self.assertIn("affected_fields", payload["anomalies"][0])
+        self.assertIn("affected_parameters", payload["anomalies"][0])
         self.assertEqual(
             payload["anomalies"][0]["sources"][0]["detector"],
             "rule_based",

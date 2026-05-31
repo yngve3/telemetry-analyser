@@ -34,6 +34,10 @@ The module does not depend on:
 
 The module works with `UnifiedTelemetry` and returns `AnomalyResult`. Analyzer implementations are application-layer services over the domain model.
 
+Detector results are aggregated inside the module. A diagnostic layer enriches
+final anomalies with `probable_cause`, `cause_confidence`,
+`diagnostic_evidence`, and `recommended_action`.
+
 ### telemetry-converter
 
 Owns conversion from external telemetry payloads into the internal `UnifiedTelemetry` format.
@@ -94,7 +98,13 @@ The viewer must not import Python code from `analysis-module` directly. Interact
 Directory for shared JSON Schema contracts:
 
 - `telemetry.schema.json` - unified telemetry format;
-- `anomaly-result.schema.json` - analysis result format.
+- `anomaly-result.schema.json` - analysis result format;
+- `flight-scenario.schema.json` - portable synthetic scenario format;
+- `telemetry-source-config.schema.json` - source mode and publication format.
+
+`telemetry.schema.json` includes freshness fields emitted by stream converters:
+`attitude_age_ms`, `position_age_ms`, `gps_age_ms`, `system_age_ms`, and
+`message_quality`.
 
 ## DDD Approach
 

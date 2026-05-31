@@ -40,3 +40,8 @@ class UnifiedTelemetry:
     flight_mode: str | None = None
     armed: bool | None = None
     sensor_health_flags: int | None = None
+    attitude_age_ms: int | None = None
+    position_age_ms: int | None = None
+    gps_age_ms: int | None = None
+    system_age_ms: int | None = None
+    message_quality: float | None = None

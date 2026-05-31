@@ -125,6 +125,27 @@
     "sensor_health_flags": {
       "type": "integer",
       "minimum": 0
+    },
+    "attitude_age_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "position_age_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "gps_age_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "system_age_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "message_quality": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
     }
   },
   "additionalProperties": false

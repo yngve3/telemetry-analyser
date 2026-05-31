@@ -22,6 +22,17 @@ New formats should implement the decoder port and be registered in the converter
 
 MAVLink-over-UDP streams can deliver message types at different rates. The stateful stream decoder stores the latest values from slower messages and emits `UnifiedTelemetry` only after the required contract fields are available.
 
+For stream input, the decoder also attaches freshness metadata:
+
+- `attitude_age_ms`;
+- `position_age_ms`;
+- `gps_age_ms`;
+- `system_age_ms`;
+- `message_quality`.
+
+These fields help downstream analyzers distinguish a valid but stale channel from
+a fresh correlated telemetry snapshot.
+
 ## Library Boundary
 
 The module is packaged as a Python library with a `src/` layout. Public imports are intentionally kept small in `telemetry_converter.__init__`; infrastructure adapters remain in their own subpackages and should be wired from a service composition layer.

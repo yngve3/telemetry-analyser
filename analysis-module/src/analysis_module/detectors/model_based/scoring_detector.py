@@ -25,7 +25,8 @@ class ScoringDetector:
     model: TelemetryScoringModel
     window_size: int = 50
     name: str = "model_based"
-    kind: DetectorKind = DetectorKind.ML
+    kind: DetectorKind = DetectorKind.MODEL_BASED
+    model_name: str = "scoring_model"
     anomaly_type: AnomalyType = AnomalyType.ANOMALOUS_BEHAVIOR
     feature_extractor: TelemetryFeatureExtractor = field(
         default_factory=TelemetryFeatureExtractor
@@ -60,8 +61,12 @@ class ScoringDetector:
                     message="Model score exceeded the configured anomaly threshold.",
                     confidence=score.confidence,
                     source=self.kind.value,
+                    detector_kind=self.kind.value,
                     detector_name=self.name,
+                    model_name=self.model_name,
+                    score=score.score,
                     affected_fields=("feature_window",),
+                    affected_parameters=("feature_window",),
                     evidence={
                         "score": score.score,
                         "threshold": score.threshold,

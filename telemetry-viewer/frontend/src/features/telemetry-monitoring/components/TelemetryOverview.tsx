@@ -85,6 +85,26 @@ export function TelemetryOverview({ result, telemetry }: TelemetryOverviewProps)
             label={t("telemetry.verticalSpeed", "Vertical speed")}
             value={formatNumber(telemetry?.vertical_speed_m_s, 1)}
           />
+          <Metric
+            label={t("telemetry.messageQuality", "Message quality")}
+            value={formatNumber(telemetry?.message_quality, 2)}
+          />
+          <Metric
+            label={t("telemetry.attitudeAge", "Attitude age, ms")}
+            value={formatInteger(telemetry?.attitude_age_ms)}
+          />
+          <Metric
+            label={t("telemetry.positionAge", "Position age, ms")}
+            value={formatInteger(telemetry?.position_age_ms)}
+          />
+          <Metric
+            label={t("telemetry.gpsAge", "GPS age, ms")}
+            value={formatInteger(telemetry?.gps_age_ms)}
+          />
+          <Metric
+            label={t("telemetry.systemAge", "System age, ms")}
+            value={formatInteger(telemetry?.system_age_ms)}
+          />
         </div>
       </div>
     </section>

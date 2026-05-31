@@ -5,8 +5,11 @@ from pydantic import BaseModel
 
 class DetectorResponse(BaseModel):
     name: str
-    kind: str
+    implementation: str
     status: str
+    detector_name: str | None
+    connected: bool
+    description: str
     aliases: list[str]
 
 

@@ -3,9 +3,10 @@
 FastAPI backend that orchestrates telemetry analysis over `analysis-module` and
 `telemetry-converter`.
 
-The service owns HTTP, profile, and session concerns. It does not implement
-anomaly detection or result aggregation. Detector execution, history updates,
-aggregation, `sources`, and `detector_outputs` are handled by `analysis-module`.
+The service owns HTTP, model profile, and session concerns. It does not
+implement anomaly detection or result aggregation. Detector execution, history
+updates, aggregation, `sources`, and `detector_outputs` are handled by
+`analysis-module`.
 
 ## Runtime Flow
 
@@ -23,6 +24,8 @@ HTTP request
 - `GET /health`
 - `GET /analysis/profile`
 - `PUT /analysis/profile`
+- `GET /analysis/models`
+- `GET /analysis/model-profiles`
 - `GET /analysis/detectors`
 - `POST /analysis/sessions`
 - `GET /analysis/sessions/{session_id}`
@@ -38,6 +41,19 @@ HTTP request
 
 `POST /analysis/sessions/{session_id}/analyze` accepts either
 `unified.telemetry` with a telemetry object or `mavlink.v2` with a base64 payload.
+
+Profiles use service-facing model names:
+
+- `rules_only`
+- `rules_with_correlation`
+- `rules_with_isolation_forest`
+- `full_hybrid`
+
+Only models with status `available` can be enabled for runtime analysis. Models
+with `planned` are exposed for API visibility, but requests that enable them are
+rejected until `analysis-module` provides connected detectors for those models.
+`GET /analysis/detectors` remains as a compatibility alias over the same model
+registry.
 
 `POST /analysis/listeners` starts an inbound listener. For UDP, `bind_host` and
 `bind_port` are local bind settings for `analysis-service`; telemetry generators

@@ -61,16 +61,55 @@
         "CRITICAL"
       ]
     },
+    "detector_kind": {
+      "type": "string",
+      "enum": [
+        "rule_based",
+        "model_based"
+      ]
+    },
+    "evidence_value": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence_value"
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/evidence_value"
+          }
+        }
+      ]
+    },
     "evidence": {
       "type": "object",
       "additionalProperties": {
-        "type": [
-          "string",
-          "number",
-          "integer",
-          "boolean",
-          "null"
-        ]
+        "$ref": "#/$defs/evidence_value"
+      }
+    },
+    "string_list": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
       }
     },
     "anomaly_source": {
@@ -103,60 +142,25 @@
       "additionalProperties": false
     },
     "aggregated_anomaly": {
-      "type": "object",
-      "required": [
-        "type",
-        "severity",
-        "message",
-        "confidence",
-        "source",
-        "detector_name",
-        "affected_fields",
-        "evidence",
-        "sources"
-      ],
-      "properties": {
-        "type": {
-          "$ref": "#/$defs/anomaly_type"
+      "allOf": [
+        {
+          "$ref": "#/$defs/detected_anomaly"
         },
-        "severity": {
-          "$ref": "#/$defs/severity"
-        },
-        "message": {
-          "type": "string",
-          "minLength": 1
-        },
-        "confidence": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 1
-        },
-        "source": {
-          "type": "string",
-          "minLength": 1
-        },
-        "sources": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/anomaly_source"
+        {
+          "type": "object",
+          "required": [
+            "sources"
+          ],
+          "properties": {
+            "sources": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/anomaly_source"
+              }
+            }
           }
-        },
-        "detector_name": {
-          "type": "string",
-          "minLength": 1
-        },
-        "affected_fields": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "evidence": {
-          "$ref": "#/$defs/evidence"
         }
-      },
-      "additionalProperties": false
+      ]
     },
     "detected_anomaly": {
       "type": "object",
@@ -166,9 +170,12 @@
         "message",
         "confidence",
         "source",
+        "detector_kind",
         "detector_name",
         "affected_fields",
-        "evidence"
+        "affected_parameters",
+        "evidence",
+        "diagnostic_evidence"
       ],
       "properties": {
         "type": {
@@ -190,19 +197,58 @@
           "type": "string",
           "minLength": 1
         },
+        "detector_kind": {
+          "$ref": "#/$defs/detector_kind"
+        },
         "detector_name": {
           "type": "string",
           "minLength": 1
         },
+        "model_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "score": {
+          "type": "number"
+        },
         "affected_fields": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
+          "$ref": "#/$defs/string_list"
+        },
+        "affected_parameters": {
+          "$ref": "#/$defs/string_list"
         },
         "evidence": {
           "$ref": "#/$defs/evidence"
+        },
+        "window_start": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "window_end": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "probable_cause": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cause_confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "diagnostic_evidence": {
+          "$ref": "#/$defs/evidence"
+        },
+        "recommended_action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/anomaly_source"
+          }
         }
       },
       "additionalProperties": false
@@ -210,10 +256,19 @@
     "detector_output": {
       "type": "object",
       "required": [
+        "detector_name",
+        "detector_kind",
         "status",
         "anomalies"
       ],
       "properties": {
+        "detector_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "detector_kind": {
+          "$ref": "#/$defs/detector_kind"
+        },
         "status": {
           "type": "string",
           "enum": [

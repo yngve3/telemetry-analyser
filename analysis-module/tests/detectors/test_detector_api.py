@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import json
-import tempfile
 import unittest
-from pathlib import Path
 
 from support import seconds_after, telemetry
 
@@ -13,12 +10,13 @@ from analysis_module import (  # noqa: E402
     AnomalyType,
     DetectorConfigurationError,
     DetectorKind,
+    create_autoencoder_detector,
+    create_correlation_based_detector,
     create_detectors,
-    create_ml_detector,
-    create_neural_network_detector,
+    create_isolation_forest_detector,
     create_rule_based_detector,
 )
-from analysis_module.features import TelemetryFeatureExtractor, TelemetryHistory  # noqa: E402
+from analysis_module.features import TelemetryHistory  # noqa: E402
 
 
 class DetectorApiTest(unittest.TestCase):
@@ -43,74 +41,69 @@ class DetectorApiTest(unittest.TestCase):
         self.assertEqual(output.anomalies[0].type, AnomalyType.BATTERY_DROP)
         self.assertEqual(len(history), 1)
 
-    def test_ml_and_nn_factories_reject_missing_artifacts(self) -> None:
-        with self.assertRaises(DetectorConfigurationError):
-            create_ml_detector(AnalyzerConfig(model_window_size=2))
-
-        with self.assertRaises(DetectorConfigurationError):
-            create_neural_network_detector(AnalyzerConfig(model_window_size=2))
-
     def test_create_detectors_uses_enabled_detector_names(self) -> None:
         detectors = create_detectors(
-            AnalyzerConfig(enabled_detectors=("rule_based",))
+            AnalyzerConfig(
+                enabled_detectors=(
+                    "rule_based",
+                    "correlation_based",
+                    "isolation_forest",
+                    "autoencoder",
+                ),
+                model_window_size=8,
+            )
         )
 
         self.assertEqual(
             [detector.name for detector in detectors],
-            ["rule_based"],
+            [
+                "rule_based",
+                "correlation_based",
+                "isolation_forest",
+                "autoencoder",
+            ],
+        )
+        self.assertEqual(detectors[0].kind, DetectorKind.RULE_BASED)
+        self.assertEqual(detectors[1].kind, DetectorKind.MODEL_BASED)
+        self.assertEqual(detectors[2].kind, DetectorKind.MODEL_BASED)
+        self.assertEqual(detectors[3].kind, DetectorKind.MODEL_BASED)
+
+    def test_create_detectors_accepts_model_detector_aliases(self) -> None:
+        detectors = create_detectors(
+            AnalyzerConfig(
+                enabled_detectors=("correlation", "isolationforest"),
+                model_window_size=8,
+            )
         )
 
-    def test_create_detectors_accepts_nn_autoencoder_alias(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            artifact_path = _create_artifact(Path(directory))
+        self.assertEqual(
+            [detector.name for detector in detectors],
+            ["correlation_based", "isolation_forest"],
+        )
 
-            detectors = create_detectors(
-                AnalyzerConfig(
-                    enabled_detectors=("nn_autoencoder",),
-                    nn_model_artifact_path=artifact_path,
-                )
-            )
+    def test_model_detector_factories_use_model_based_kind(self) -> None:
+        detectors = (
+            create_correlation_based_detector(),
+            create_isolation_forest_detector(AnalyzerConfig(model_window_size=8)),
+            create_autoencoder_detector(AnalyzerConfig(model_window_size=8)),
+        )
 
-        self.assertEqual([detector.name for detector in detectors], ["nn_autoencoder"])
+        self.assertEqual(
+            [detector.kind for detector in detectors],
+            [DetectorKind.MODEL_BASED] * 3,
+        )
 
-    def test_create_detectors_accepts_nn_alias(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            artifact_path = _create_artifact(Path(directory))
-
-            detectors = create_detectors(
-                AnalyzerConfig(
-                    enabled_detectors=("nn",),
-                    nn_model_artifact_path=artifact_path,
-                )
-            )
-
-        self.assertEqual([detector.name for detector in detectors], ["nn_autoencoder"])
+    def test_create_detectors_rejects_legacy_ml_nn_names(self) -> None:
+        for detector_name in ("ml", "nn", "nn_autoencoder"):
+            with self.subTest(detector_name=detector_name):
+                with self.assertRaises(DetectorConfigurationError):
+                    create_detectors(
+                        AnalyzerConfig(enabled_detectors=(detector_name,))
+                    )
 
     def test_create_detectors_rejects_unknown_detector_name(self) -> None:
         with self.assertRaises(DetectorConfigurationError):
             create_detectors(AnalyzerConfig(enabled_detectors=("unknown",)))
-
-
-def _create_artifact(path: Path) -> Path:
-    feature_names = TelemetryFeatureExtractor().feature_names
-    (path / "model.pt").write_bytes(b"")
-    _write_json(
-        path / "metadata.json",
-        {
-            "model_type": "autoencoder",
-            "feature_version": "1.0",
-            "window_size": 50,
-            "feature_names": list(feature_names),
-            "created_at": "2026-05-24T00:00:00Z",
-        },
-    )
-    _write_json(path / "normalizer.json", {"type": "identity"})
-    _write_json(path / "threshold.json", {"threshold": 0.75})
-    return path
-
-
-def _write_json(path: Path, payload: dict[str, object]) -> None:
-    path.write_text(json.dumps(payload), encoding="utf-8")
 
 
 if __name__ == "__main__":

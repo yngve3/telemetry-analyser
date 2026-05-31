@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+from analysis_module.application.cause_diagnosis import CauseDiagnosisLayer
 
 from analysis_module.domain import (
     AnomalySource,
@@ -25,6 +27,10 @@ _SEVERITY_RANK = {
 @dataclass(frozen=True, slots=True)
 class ResultAggregator:
     """Builds source-aware `AnomalyResult` objects from detector output."""
+
+    cause_diagnosis: CauseDiagnosisLayer = field(
+        default_factory=CauseDiagnosisLayer
+    )
 
     def aggregate(
         self,
@@ -90,17 +96,28 @@ class ResultAggregator:
             for output, anomaly in items
         )
 
-        return DetectedAnomaly(
+        merged = DetectedAnomaly(
             type=anomaly_type,
             severity=severity,
             message=best.message,
             confidence=confidence,
             source=best.source,
+            detector_kind=best.detector_kind,
             detector_name=best.detector_name,
+            model_name=best.model_name,
+            score=best.score,
             affected_fields=best.affected_fields,
+            affected_parameters=best.affected_parameters,
             evidence=best.evidence,
+            window_start=best.window_start,
+            window_end=best.window_end,
+            probable_cause=best.probable_cause,
+            cause_confidence=best.cause_confidence,
+            diagnostic_evidence=best.diagnostic_evidence,
+            recommended_action=best.recommended_action,
             sources=sources,
         )
+        return self.cause_diagnosis.enrich(merged)
 
 
 def _detector_kind_for_legacy_anomalies():

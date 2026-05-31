@@ -25,8 +25,11 @@ class PublicApiTest(unittest.TestCase):
         self.assertIn("TelemetryAnalyzer", analysis_module.__all__)
         self.assertIn("TelemetryDetector", analysis_module.__all__)
         self.assertIn("AnalyzerConfig", analysis_module.__all__)
+        self.assertIn("create_autoencoder_detector", analysis_module.__all__)
+        self.assertIn("create_correlation_based_detector", analysis_module.__all__)
         self.assertIn("create_detectors", analysis_module.__all__)
         self.assertIn("create_default_analyzer", analysis_module.__all__)
+        self.assertIn("create_isolation_forest_detector", analysis_module.__all__)
 
 
 if __name__ == "__main__":

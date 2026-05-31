@@ -6,6 +6,7 @@ import math
 import struct
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from time import monotonic
 from typing import Any
 
 from telemetry_converter.domain.models import UnifiedTelemetryPayload
@@ -38,6 +39,23 @@ CRC_EXTRAS = {
     GLOBAL_POSITION_INT_MSG_ID: GLOBAL_POSITION_INT_CRC_EXTRA,
 }
 
+_ATTITUDE_GROUP = "attitude"
+_POSITION_GROUP = "position"
+_GPS_GROUP = "gps"
+_SYSTEM_GROUP = "system"
+_MESSAGE_GROUPS = (
+    _ATTITUDE_GROUP,
+    _POSITION_GROUP,
+    _GPS_GROUP,
+    _SYSTEM_GROUP,
+)
+_GROUP_MAX_AGE_MS = {
+    _ATTITUDE_GROUP: 250,
+    _POSITION_GROUP: 750,
+    _GPS_GROUP: 1_500,
+    _SYSTEM_GROUP: 3_000,
+}
+
 
 class MavlinkDecodeError(ValueError):
     """Raised when a MAVLink payload cannot be decoded."""
@@ -65,6 +83,7 @@ class MavlinkV2TelemetryDecoder:
         for frame in frames:
             self._apply_frame(frame, values)
 
+        _apply_snapshot_freshness(values, frames)
         return _build_unified_telemetry(values)
 
     def _apply_frame(self, frame: _MavlinkFrame, values: dict[str, Any]) -> None:
@@ -86,6 +105,7 @@ class MavlinkV2TelemetryStreamDecoder:
     def __init__(self) -> None:
         self._values: dict[str, Any] = {}
         self._boot_time_epoch: datetime | None = None
+        self._updated_at_s: dict[str, float] = {}
 
     def update(self, payload: bytes) -> UnifiedTelemetryPayload | None:
         frames = _parse_frames(payload)
@@ -98,6 +118,7 @@ class MavlinkV2TelemetryStreamDecoder:
         if not _has_required_telemetry_fields(self._values):
             return None
 
+        _apply_stream_freshness(self._values, self._updated_at_s, monotonic())
         return _build_unified_telemetry(self._values)
 
     def _apply_frame(self, frame: _MavlinkFrame) -> None:
@@ -105,20 +126,29 @@ class MavlinkV2TelemetryStreamDecoder:
         if self._values.get("drone_id") != drone_id:
             self._values = {"drone_id": drone_id}
             self._boot_time_epoch = None
+            self._updated_at_s = {}
 
         if frame.message_id == HEARTBEAT_MSG_ID:
             _apply_heartbeat(frame.payload, self._values)
+            self._mark_message_group(_SYSTEM_GROUP)
         elif frame.message_id == ATTITUDE_MSG_ID:
             _apply_attitude(frame.payload, self._values)
+            self._mark_message_group(_ATTITUDE_GROUP)
             self._update_timestamp_from_boot_time()
         elif frame.message_id == GLOBAL_POSITION_INT_MSG_ID:
             _apply_global_position_int(frame.payload, self._values)
+            self._mark_message_group(_POSITION_GROUP)
             self._update_timestamp_from_boot_time()
         elif frame.message_id == GPS_RAW_INT_MSG_ID:
             _apply_gps_raw_int(frame.payload, self._values)
+            self._mark_message_group(_GPS_GROUP)
             self._anchor_boot_time()
         elif frame.message_id == SYS_STATUS_MSG_ID:
             _apply_sys_status(frame.payload, self._values)
+            self._mark_message_group(_SYSTEM_GROUP)
+
+    def _mark_message_group(self, group: str) -> None:
+        self._updated_at_s[group] = monotonic()
 
     def _anchor_boot_time(self) -> None:
         timestamp = self._values.get("timestamp")
@@ -289,6 +319,77 @@ def _apply_sys_status(payload: bytes, values: dict[str, Any]) -> None:
     values["battery_percent"] = float(battery_remaining)
 
 
+def _apply_snapshot_freshness(
+    values: dict[str, Any],
+    frames: tuple[_MavlinkFrame, ...],
+) -> None:
+    groups = {
+        group
+        for frame in frames
+        if (group := _message_group(frame.message_id)) is not None
+    }
+    for group in groups:
+        values[_age_field_name(group)] = 0
+    values["message_quality"] = _message_quality(
+        {
+            group: 0
+            for group in groups
+        }
+    )
+
+
+def _apply_stream_freshness(
+    values: dict[str, Any],
+    updated_at_s: dict[str, float],
+    now_s: float,
+) -> None:
+    age_by_group: dict[str, int] = {}
+    for group in _MESSAGE_GROUPS:
+        updated_at = updated_at_s.get(group)
+        if updated_at is None:
+            continue
+        age_ms = max(0, int((now_s - updated_at) * 1000))
+        age_by_group[group] = age_ms
+        values[_age_field_name(group)] = age_ms
+
+    values["message_quality"] = _message_quality(age_by_group)
+
+
+def _message_group(message_id: int) -> str | None:
+    if message_id == ATTITUDE_MSG_ID:
+        return _ATTITUDE_GROUP
+    if message_id == GLOBAL_POSITION_INT_MSG_ID:
+        return _POSITION_GROUP
+    if message_id == GPS_RAW_INT_MSG_ID:
+        return _GPS_GROUP
+    if message_id in (HEARTBEAT_MSG_ID, SYS_STATUS_MSG_ID):
+        return _SYSTEM_GROUP
+    return None
+
+
+def _age_field_name(group: str) -> str:
+    return f"{group}_age_ms"
+
+
+def _message_quality(age_by_group: dict[str, int]) -> float:
+    scores = []
+    for group in _MESSAGE_GROUPS:
+        age_ms = age_by_group.get(group)
+        if age_ms is None:
+            scores.append(0.0)
+            continue
+
+        max_age_ms = _GROUP_MAX_AGE_MS[group]
+        if age_ms <= max_age_ms:
+            scores.append(1.0)
+        elif age_ms >= max_age_ms * 3:
+            scores.append(0.0)
+        else:
+            scores.append(1.0 - (age_ms - max_age_ms) / (max_age_ms * 2))
+
+    return round(sum(scores) / len(scores), 3)
+
+
 def _build_unified_telemetry(values: dict[str, Any]) -> UnifiedTelemetryPayload:
     required = (
         "timestamp",
@@ -336,6 +437,11 @@ def _build_unified_telemetry(values: dict[str, Any]) -> UnifiedTelemetryPayload:
         flight_mode=values.get("flight_mode"),
         armed=values.get("armed"),
         sensor_health_flags=values.get("sensor_health_flags"),
+        attitude_age_ms=values.get("attitude_age_ms"),
+        position_age_ms=values.get("position_age_ms"),
+        gps_age_ms=values.get("gps_age_ms"),
+        system_age_ms=values.get("system_age_ms"),
+        message_quality=values.get("message_quality"),
     )
 
 

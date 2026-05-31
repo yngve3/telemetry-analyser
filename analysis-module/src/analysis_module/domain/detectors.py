@@ -13,8 +13,7 @@ class DetectorKind(StrEnum):
     """Supported detector families."""
 
     RULE_BASED = "rule_based"
-    ML = "ml"
-    NN = "nn"
+    MODEL_BASED = "model_based"
 
 
 class DetectorStatus(StrEnum):
@@ -40,6 +39,8 @@ class DetectorOutput:
 
     def to_dict(self) -> dict[str, Any]:
         return {
+            "detector_name": self.detector_name,
+            "detector_kind": self.detector_kind.value,
             "status": self.status.value,
             "message": self.message,
             "anomalies": [

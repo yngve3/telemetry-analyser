@@ -310,6 +310,25 @@ class UnifiedTelemetryValidator:
             violations,
             minimum=0,
         )
+        for field_name in (
+            "attitude_age_ms",
+            "position_age_ms",
+            "gps_age_ms",
+            "system_age_ms",
+        ):
+            self._validate_optional_integer(
+                field_name,
+                getattr(telemetry, field_name),
+                violations,
+                minimum=0,
+            )
+        self._validate_optional_number(
+            "message_quality",
+            telemetry.message_quality,
+            violations,
+            minimum=0.0,
+            maximum=1.0,
+        )
 
         if violations:
             raise TelemetryValidationError(violations)

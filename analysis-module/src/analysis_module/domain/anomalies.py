@@ -11,7 +11,9 @@ if TYPE_CHECKING:
     from analysis_module.domain.detectors import DetectorOutput
 
 
-EvidenceValue: TypeAlias = str | int | float | bool | None
+EvidenceValue: TypeAlias = (
+    str | int | float | bool | None | dict[str, Any] | tuple[Any, ...] | list[Any]
+)
 
 
 class Severity(StrEnum):
@@ -69,10 +71,36 @@ class DetectedAnomaly:
     message: str
     confidence: float = 1.0
     source: str = "rule_based"
+    detector_kind: str | None = None
     detector_name: str = "unknown"
+    model_name: str | None = None
+    score: float | None = None
     affected_fields: tuple[str, ...] = ()
+    affected_parameters: tuple[str, ...] = ()
     evidence: dict[str, EvidenceValue] = field(default_factory=dict)
+    window_start: datetime | None = None
+    window_end: datetime | None = None
+    probable_cause: str | None = None
+    cause_confidence: float | None = None
+    diagnostic_evidence: dict[str, EvidenceValue] = field(default_factory=dict)
+    recommended_action: str | None = None
     sources: tuple[AnomalySource, ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.detector_kind is None:
+            object.__setattr__(self, "detector_kind", self.source)
+        if not self.affected_parameters and self.affected_fields:
+            object.__setattr__(
+                self,
+                "affected_parameters",
+                self.affected_fields,
+            )
+        if not self.affected_fields and self.affected_parameters:
+            object.__setattr__(
+                self,
+                "affected_fields",
+                self.affected_parameters,
+            )
 
     def to_dict(self, include_sources: bool = True) -> dict[str, Any]:
         payload: dict[str, Any] = {
@@ -81,10 +109,27 @@ class DetectedAnomaly:
             "message": self.message,
             "confidence": self.confidence,
             "source": self.source,
+            "detector_kind": self.detector_kind,
             "detector_name": self.detector_name,
             "affected_fields": list(self.affected_fields),
+            "affected_parameters": list(self.affected_parameters),
             "evidence": self.evidence,
+            "diagnostic_evidence": self.diagnostic_evidence,
         }
+        if self.model_name is not None:
+            payload["model_name"] = self.model_name
+        if self.score is not None:
+            payload["score"] = self.score
+        if self.window_start is not None:
+            payload["window_start"] = self.window_start.isoformat()
+        if self.window_end is not None:
+            payload["window_end"] = self.window_end.isoformat()
+        if self.probable_cause is not None:
+            payload["probable_cause"] = self.probable_cause
+        if self.cause_confidence is not None:
+            payload["cause_confidence"] = self.cause_confidence
+        if self.recommended_action is not None:
+            payload["recommended_action"] = self.recommended_action
         if include_sources:
             payload["sources"] = [source.to_dict() for source in self.sources]
         return payload

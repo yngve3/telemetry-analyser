@@ -41,6 +41,11 @@ class UnifiedTelemetryPayload:
     flight_mode: str | None = None
     armed: bool | None = None
     sensor_health_flags: int | None = None
+    attitude_age_ms: int | None = None
+    position_age_ms: int | None = None
+    gps_age_ms: int | None = None
+    system_age_ms: int | None = None
+    message_quality: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
@@ -77,6 +82,11 @@ class UnifiedTelemetryPayload:
             "flight_mode": self.flight_mode,
             "armed": self.armed,
             "sensor_health_flags": self.sensor_health_flags,
+            "attitude_age_ms": self.attitude_age_ms,
+            "position_age_ms": self.position_age_ms,
+            "gps_age_ms": self.gps_age_ms,
+            "system_age_ms": self.system_age_ms,
+            "message_quality": self.message_quality,
         }
         payload.update(
             {

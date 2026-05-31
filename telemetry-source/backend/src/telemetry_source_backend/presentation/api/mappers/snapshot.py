@@ -86,6 +86,11 @@ def sample_from_request(request: SnapshotSampleRequest) -> TelemetrySample:
         flight_mode=request.flight_mode,
         armed=request.armed,
         sensor_health_flags=request.sensor_health_flags,
+        attitude_age_ms=request.attitude_age_ms,
+        position_age_ms=request.position_age_ms,
+        gps_age_ms=request.gps_age_ms,
+        system_age_ms=request.system_age_ms,
+        message_quality=request.message_quality,
     )
 
 

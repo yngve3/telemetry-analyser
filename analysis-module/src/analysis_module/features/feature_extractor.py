@@ -36,6 +36,11 @@ class TelemetryFeatureExtractor:
         "delta_battery_percent",
         "delta_heading_deg",
         "elapsed_sec",
+        "attitude_age_ms",
+        "position_age_ms",
+        "gps_age_ms",
+        "system_age_ms",
+        "message_quality",
     )
 
     def extract(
@@ -69,6 +74,11 @@ class TelemetryFeatureExtractor:
             ),
             _heading_delta_deg(previous, current) if previous is not None else 0.0,
             elapsed_sec,
+            _number(current.attitude_age_ms),
+            _number(current.position_age_ms),
+            _number(current.gps_age_ms),
+            _number(current.system_age_ms),
+            _message_quality(current.message_quality),
         )
         return FeatureVector(self.feature_names, values)
 
@@ -111,6 +121,12 @@ def heading_delta_degrees(
 def _number(value: float | int | None) -> float:
     if value is None:
         return 0.0
+    return float(value)
+
+
+def _message_quality(value: float | None) -> float:
+    if value is None:
+        return 1.0
     return float(value)
 
 

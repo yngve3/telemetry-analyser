@@ -21,14 +21,16 @@ class ResultAggregatorTest(unittest.TestCase):
             affected_fields=("latitude_deg", "longitude_deg"),
             evidence={"distance_delta_m": 130.4},
         )
-        ml_anomaly = DetectedAnomaly(
+        model_anomaly = DetectedAnomaly(
             type=AnomalyType.GPS_SPOOFING,
             severity=Severity.CRITICAL,
-            message="ML confirmed GPS jump.",
+            message="Model confirmed GPS jump.",
             confidence=0.9,
-            detector_name="ml",
-            source="ml",
-            affected_fields=("feature_window",),
+            detector_name="isolation_forest",
+            source="model_based",
+            detector_kind="model_based",
+            model_name="isolation_forest_baseline_v1",
+            affected_parameters=("feature_window",),
             evidence={"score": 0.91},
         )
 
@@ -41,9 +43,9 @@ class ResultAggregatorTest(unittest.TestCase):
                     anomalies=(rule_anomaly,),
                 ),
                 DetectorOutput(
-                    detector_name="ml",
-                    detector_kind=DetectorKind.ML,
-                    anomalies=(ml_anomaly,),
+                    detector_name="isolation_forest",
+                    detector_kind=DetectorKind.MODEL_BASED,
+                    anomalies=(model_anomaly,),
                 ),
             ),
         )
@@ -52,12 +54,21 @@ class ResultAggregatorTest(unittest.TestCase):
         self.assertEqual(result.anomalies[0].type, AnomalyType.GPS_SPOOFING)
         self.assertEqual(result.anomalies[0].severity, Severity.CRITICAL)
         self.assertEqual(result.anomalies[0].confidence, 0.9)
-        self.assertEqual(result.anomalies[0].source, "ml")
-        self.assertEqual(result.anomalies[0].detector_name, "ml")
+        self.assertEqual(result.anomalies[0].source, "model_based")
+        self.assertEqual(result.anomalies[0].detector_kind, "model_based")
+        self.assertEqual(result.anomalies[0].detector_name, "isolation_forest")
+        self.assertEqual(
+            result.anomalies[0].model_name,
+            "isolation_forest_baseline_v1",
+        )
         self.assertEqual(result.anomalies[0].evidence["score"], 0.91)
+        self.assertEqual(result.anomalies[0].probable_cause, "gps_spoofing")
+        self.assertEqual(result.anomalies[0].cause_confidence, 0.9)
+        self.assertTrue(result.anomalies[0].diagnostic_evidence)
+        self.assertTrue(result.anomalies[0].recommended_action)
         self.assertEqual(
             [source.detector for source in result.anomalies[0].sources],
-            ["rule_based", "ml"],
+            ["rule_based", "isolation_forest"],
         )
         self.assertEqual(result.detector_outputs[0].detector_name, "rule_based")
 
@@ -86,7 +97,8 @@ class ResultAggregatorTest(unittest.TestCase):
             severity=Severity.WARNING,
             message="Model score exceeded threshold.",
             confidence=0.7,
-            detector_name="ml",
+            detector_name="autoencoder",
+            source="model_based",
         )
 
         result = ResultAggregator().aggregate_outputs(
@@ -97,8 +109,8 @@ class ResultAggregatorTest(unittest.TestCase):
                     detector_kind=DetectorKind.RULE_BASED,
                 ),
                 DetectorOutput(
-                    detector_name="ml",
-                    detector_kind=DetectorKind.ML,
+                    detector_name="autoencoder",
+                    detector_kind=DetectorKind.MODEL_BASED,
                     anomalies=(anomaly,),
                 ),
             ),

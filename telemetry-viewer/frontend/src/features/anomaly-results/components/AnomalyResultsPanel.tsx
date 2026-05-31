@@ -107,6 +107,31 @@ function AnomalyCard({
         )}
       </div>
 
+      {anomaly.probable_cause ||
+      (anomaly.cause_confidence !== undefined &&
+        anomaly.cause_confidence !== null) ? (
+        <div className="source-chip-row">
+          {anomaly.probable_cause ? (
+            <span className="source-chip">
+              <strong>{t("anomalies.cause", "Cause")}</strong>
+              <span>{anomaly.probable_cause}</span>
+            </span>
+          ) : null}
+          {anomaly.cause_confidence !== undefined &&
+          anomaly.cause_confidence !== null ? (
+            <span className="source-chip">
+              <strong>{t("anomalies.causeConfidence", "Cause confidence")}</strong>
+              <span>{formatConfidence(anomaly.cause_confidence)}</span>
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+      {anomaly.recommended_action ? (
+        <div className="message">
+          {t("anomalies.action", "Action")}: {anomaly.recommended_action}
+        </div>
+      ) : null}
+
       <details className="contribution-details">
         <summary>{t("anomalies.contributions", "Detector contribution")}</summary>
         <div className="contribution-grid">

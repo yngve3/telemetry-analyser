@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://telemetry-analyser.local/schemas/telemetry-source-config.schema.json",
+  "title": "TelemetrySourceConfig",
+  "description": "Portable telemetry source configuration contract.",
+  "type": "object",
+  "required": [
+    "mode"
+  ],
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": [
+        "synthetic",
+        "snapshot",
+        "external"
+      ]
+    },
+    "synthetic": {
+      "$ref": "flight-scenario.schema.json"
+    },
+    "snapshot": {
+      "$ref": "#/$defs/snapshot"
+    },
+    "external": {
+      "$ref": "#/$defs/external"
+    },
+    "publication": {
+      "$ref": "#/$defs/publication"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "snapshot": {
+      "type": "object",
+      "required": [
+        "name",
+        "samples"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "samples": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "telemetry.schema.json"
+          }
+        },
+        "playback_mode": {
+          "type": "string",
+          "enum": [
+            "send_once",
+            "stream"
+          ]
+        },
+        "interval_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "repeat": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "external": {
+      "type": "object",
+      "required": [
+        "address",
+        "port",
+        "protocol"
+      ],
+      "properties": {
+        "address": {
+          "type": "string",
+          "minLength": 1
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "protocol": {
+          "type": "string",
+          "enum": [
+            "udp"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "publication": {
+      "type": "object",
+      "properties": {
+        "encoder": {
+          "type": "string",
+          "enum": [
+            "mavlink"
+          ]
+        },
+        "transport": {
+          "type": "string",
+          "enum": [
+            "udp"
+          ]
+        },
+        "host": {
+          "type": "string",
+          "minLength": 1
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

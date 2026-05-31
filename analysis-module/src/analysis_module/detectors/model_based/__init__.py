@@ -1,9 +1,16 @@
 """Model-based anomaly detection interfaces."""
 
+from analysis_module.detectors.model_based.autoencoder import AutoencoderDetector
+from analysis_module.detectors.model_based.correlation_based import (
+    CorrelationBasedDetector,
+)
 from analysis_module.detectors.model_based.interfaces import (
     ModelScore,
     NoOpTelemetryScoringModel,
     TelemetryScoringModel,
+)
+from analysis_module.detectors.model_based.isolation_forest import (
+    IsolationForestDetector,
 )
 from analysis_module.detectors.model_based.model_artifact import (
     ModelArtifact,
@@ -13,9 +20,16 @@ from analysis_module.detectors.model_based.model_artifact import (
 from analysis_module.detectors.model_based.model_repository import (
     ModelArtifactRepository,
 )
+from analysis_module.detectors.model_based.neural_models import (
+    AutoencoderArtifactScoringModel,
+)
 from analysis_module.detectors.model_based.scoring_detector import ScoringDetector
 
 __all__ = [
+    "AutoencoderDetector",
+    "AutoencoderArtifactScoringModel",
+    "CorrelationBasedDetector",
+    "IsolationForestDetector",
     "ModelArtifact",
     "ModelArtifactError",
     "ModelArtifactMetadata",
