@@ -47,6 +47,23 @@ class RuleBasedRulesTest(unittest.TestCase):
         self.assertEqual(anomaly.type, AnomalyType.GPS_SPOOFING)
         self.assertIn("distance_delta_m", anomaly.evidence)
 
+    def test_gps_spoofing_rule_uses_previous_sample_with_elapsed_time(self) -> None:
+        history = TelemetryHistory()
+        history.append(telemetry(timestamp=seconds_after(0)))
+        history.append(telemetry(timestamp=seconds_after(1)))
+
+        anomaly = GpsSpoofingRule().evaluate(
+            telemetry(
+                timestamp=seconds_after(1),
+                latitude_deg=55.7758,
+                ground_speed_m_s=8.0,
+            ),
+            history,
+        )
+
+        self.assertIsNotNone(anomaly)
+        self.assertEqual(anomaly.type, AnomalyType.GPS_SPOOFING)
+
     def test_imu_spike_rule_detects_angular_rate_spike(self) -> None:
         anomaly = ImuSpikeRule().evaluate(
             telemetry(roll_rate_rad_s=8.0),

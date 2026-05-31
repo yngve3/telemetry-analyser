@@ -27,7 +27,10 @@ class TelemetryHistoryView(Protocol):
 class TelemetryRule(Protocol):
     """Contract implemented by deterministic telemetry rules."""
 
-    name: str
+    @property
+    def name(self) -> str:
+        """Rule public name."""
+        ...
 
     def evaluate(
         self,

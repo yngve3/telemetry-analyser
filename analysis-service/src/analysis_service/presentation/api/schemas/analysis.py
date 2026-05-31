@@ -6,7 +6,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class TelemetryPayloadFormat(StrEnum):
@@ -53,6 +53,8 @@ class UnifiedTelemetryRequest(BaseModel):
 
 
 class AnalyzeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     format: TelemetryPayloadFormat = TelemetryPayloadFormat.UNIFIED_TELEMETRY
-    telemetry: UnifiedTelemetryRequest | None = None
+    telemetry: dict[str, Any] | None = None
     payload_base64: str | None = None

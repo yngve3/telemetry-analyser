@@ -109,6 +109,10 @@
         "severity",
         "message",
         "confidence",
+        "source",
+        "detector_name",
+        "affected_fields",
+        "evidence",
         "sources"
       ],
       "properties": {
@@ -127,6 +131,10 @@
           "minimum": 0,
           "maximum": 1
         },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
         "sources": {
           "type": "array",
           "items": {
@@ -136,6 +144,13 @@
         "detector_name": {
           "type": "string",
           "minLength": 1
+        },
+        "affected_fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         },
         "evidence": {
           "$ref": "#/$defs/evidence"
@@ -150,7 +165,9 @@
         "severity",
         "message",
         "confidence",
+        "source",
         "detector_name",
+        "affected_fields",
         "evidence"
       ],
       "properties": {
@@ -169,9 +186,20 @@
           "minimum": 0,
           "maximum": 1
         },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
         "detector_name": {
           "type": "string",
           "minLength": 1
+        },
+        "affected_fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         },
         "evidence": {
           "$ref": "#/$defs/evidence"

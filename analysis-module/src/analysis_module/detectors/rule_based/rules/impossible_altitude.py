@@ -39,6 +39,7 @@ class ImpossibleAltitudeRule:
             ),
             confidence=1.0,
             detector_name=self.name,
+            affected_fields=("altitude_m",),
             evidence={
                 "altitude_m": current.altitude_m,
                 "min_altitude_m": self.min_altitude_m,

@@ -1,14 +1,24 @@
 import { expect, test } from "@playwright/test";
 
 import {
+  analyzeTelemetry,
   anomalyTypes,
   cleanupPipeline,
+  createAnalysisSession,
+  createListener,
+  deleteJson,
   env,
+  getJson,
   injectAnomaly,
+  listenerPort,
+  ruleBasedProfile,
   startPipeline,
+  telemetryPayload,
+  uniqueId,
   waitForLastResult,
   waitForListenerSamples,
   waitForSessionState,
+  waitForValue,
 } from "./support/api.mjs";
 
 test.describe("Viewer E2E", () => {
@@ -18,7 +28,9 @@ test.describe("Viewer E2E", () => {
     await openViewer(page);
 
     await expect(page.getByText("Telemetry Viewer")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Analysis" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Analysis", exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Session panel" }),
     ).toBeVisible();
@@ -31,6 +43,94 @@ test.describe("Viewer E2E", () => {
     await page.waitForTimeout(500);
 
     expect(consoleErrors).toEqual([]);
+  });
+
+  test("viewer shows empty rule-based state", async ({ page }) => {
+    await openViewer(page);
+
+    await expect(page.getByText("rule_based").first()).toBeVisible();
+    await expect(page.getByText("No analysis result yet.")).toBeVisible();
+    await expect(page.getByText("No detector output yet.")).toBeVisible();
+  });
+
+  test("viewer shows analysis session", async ({ page, request }) => {
+    const sessionId = uniqueId("viewer-session");
+
+    try {
+      await createAnalysisSession(request, {
+        sessionId,
+        profile: ruleBasedProfile(),
+      });
+
+      await openViewer(page);
+      await selectSession(page, sessionId);
+
+      const sessionPanel = page.locator("section.data-panel", {
+        hasText: "Session panel",
+      });
+      await expect(sessionPanel).toContainText(sessionId);
+      await expect(sessionPanel).toContainText("0");
+      await expect(
+        page.locator("section.data-panel", { hasText: "Analysis profile" }),
+      ).toContainText("1 enabled");
+    } finally {
+      await deleteJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/sessions/${sessionId}`,
+      );
+    }
+  });
+
+  test("viewer shows UDP listener status", async (
+    { page, request },
+    testInfo,
+  ) => {
+    const sessionId = uniqueId("viewer-listener");
+    const port = listenerPort(testInfo);
+    let listenerId = null;
+
+    try {
+      await createAnalysisSession(request, {
+        sessionId,
+        profile: ruleBasedProfile(),
+      });
+      const createdListener = await createListener(request, sessionId, port);
+      listenerId = createdListener.listener_id;
+      await waitForValue(
+        async () =>
+          getJson(
+            request,
+            `${env.analysisBaseUrl}/analysis/listeners/${listenerId}`,
+          ),
+        (payload) => payload.status === "active",
+        "viewer listener to become active",
+      );
+
+      await openViewer(page);
+      await page.getByRole("button", { name: "Listeners" }).click();
+      await expect(page.getByText(listenerId).first()).toBeVisible();
+      await page.getByRole("button", { name: listenerId }).click();
+
+      const listenerState = page.locator("section.data-panel", {
+        hasText: "Listener state",
+      });
+      await expect(listenerState).toContainText("active");
+      await expect(listenerState).toContainText("0.0.0.0");
+      await expect(listenerState).toContainText(String(port));
+      await expect(listenerState).toContainText("Packets");
+      await expect(listenerState).toContainText("Converted");
+    } finally {
+      if (listenerId) {
+        await deleteJson(
+          request,
+          `${env.analysisBaseUrl}/analysis/listeners/${listenerId}`,
+        );
+      }
+      await deleteJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/sessions/${sessionId}`,
+      );
+    }
   });
 
   test("viewer shows live rule-based result", async (
@@ -58,12 +158,50 @@ test.describe("Viewer E2E", () => {
         page.getByText(state.last_telemetry.drone_id).first(),
       ).toBeVisible();
       await expect(
-        page.getByText(state.last_telemetry.timestamp).first(),
-      ).toBeVisible();
+        page.locator("section.data-panel", { hasText: "Telemetry overview" }),
+      ).toContainText(/\d{4}-\d{2}-\d{2}T/);
       await expect(page.getByText("rule_based").first()).toBeVisible();
       await expect(
         page.locator("section.data-panel", { hasText: "Anomaly results" }),
       ).toContainText(/No anomalies in the latest result\.|found|clear/);
+
+      expect(consoleErrors).toEqual([]);
+    } finally {
+      await cleanupPipeline(request, pipeline);
+    }
+  });
+
+  test("viewer updates listener counters live", async (
+    { page, request },
+    testInfo,
+  ) => {
+    const pipeline = await startPipeline(request, testInfo);
+    const consoleErrors = captureConsoleErrors(page);
+
+    try {
+      await waitForListenerSamples(request, pipeline.listenerId);
+
+      await openViewer(page);
+      await page.getByRole("button", { name: "Listeners" }).click();
+      await expect(page.getByText(pipeline.listenerId).first()).toBeVisible();
+      await page.getByRole("button", { name: pipeline.listenerId }).click();
+
+      const listenerState = page.locator("section.data-panel", {
+        hasText: "Listener state",
+      });
+      const initialPackets = await metricValue(listenerState, "Packets");
+      const initialConverted = await metricValue(listenerState, "Converted");
+
+      await expect
+        .poll(() => metricValue(listenerState, "Packets"), {
+          timeout: 6_000,
+        })
+        .toBeGreaterThan(initialPackets);
+      await expect
+        .poll(() => metricValue(listenerState, "Converted"), {
+          timeout: 6_000,
+        })
+        .toBeGreaterThan(initialConverted);
 
       expect(consoleErrors).toEqual([]);
     } finally {
@@ -97,6 +235,83 @@ test.describe("Viewer E2E", () => {
       await cleanupPipeline(request, pipeline);
     }
   });
+
+  test("viewer shows detector output details", async ({ page, request }) => {
+    const sessionId = uniqueId("viewer-details");
+
+    try {
+      await createAnalysisSession(request, {
+        sessionId,
+        profile: ruleBasedProfile(),
+      });
+      await analyzeTelemetry(
+        request,
+        sessionId,
+        telemetryPayload({ battery_percent: 10 }),
+      );
+
+      await openViewer(page);
+      await selectSession(page, sessionId);
+
+      const detectorPanel = page.locator("section.data-panel", {
+        hasText: "Detector outputs",
+      });
+      await expect(detectorPanel).toContainText("rule_based");
+      await expect(detectorPanel).toContainText("LOW_BATTERY");
+      await expect(detectorPanel).toContainText(/50%|100%/);
+      await detectorPanel.getByText("Evidence").click();
+      await expect(detectorPanel).toContainText("battery_percent");
+    } finally {
+      await deleteJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/sessions/${sessionId}`,
+      );
+    }
+  });
+
+  test("viewer profile toggle rule-based", async ({ page, request }) => {
+    await request.put(`${env.analysisBaseUrl}/analysis/profile`, {
+      data: ruleBasedProfile(),
+    });
+
+    try {
+      await openViewer(page);
+
+      const analyzersPanel = page.locator("section.data-panel", {
+        hasText: "Analyzers",
+      });
+      const ruleBasedButton = analyzersPanel.getByRole("button", {
+        name: /rule_based/,
+      });
+
+      await expect(ruleBasedButton).toHaveAttribute("aria-pressed", "true");
+      await ruleBasedButton.click();
+      await expect(ruleBasedButton).toHaveAttribute("aria-pressed", "false");
+      await ruleBasedButton.click();
+      await expect(ruleBasedButton).toHaveAttribute("aria-pressed", "true");
+
+      await Promise.all([
+        page.waitForResponse(
+          (response) =>
+            response.url().includes("/analysis/profile") &&
+            response.request().method() === "PUT" &&
+            response.ok(),
+        ),
+        analyzersPanel.getByRole("button", { name: "Save analyzers" }).click(),
+      ]);
+
+      const profile = await getJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/profile`,
+      );
+      expect(profile.enabled_detectors).toEqual(["rule_based"]);
+      await expect(ruleBasedButton).toHaveAttribute("aria-pressed", "true");
+    } finally {
+      await request.put(`${env.analysisBaseUrl}/analysis/profile`, {
+        data: ruleBasedProfile(),
+      });
+    }
+  });
 });
 
 async function openViewer(page) {
@@ -124,4 +339,13 @@ function captureConsoleErrors(page) {
     errors.push(error.message);
   });
   return errors;
+}
+
+async function metricValue(container, label) {
+  const text = await container
+    .locator(".metric", { hasText: label })
+    .locator("strong")
+    .first()
+    .textContent();
+  return Number(text ?? 0);
 }

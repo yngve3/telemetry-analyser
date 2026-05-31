@@ -95,8 +95,10 @@ class ResultAggregator:
             severity=severity,
             message=best.message,
             confidence=confidence,
-            detector_name="aggregated",
-            evidence={},
+            source=best.source,
+            detector_name=best.detector_name,
+            affected_fields=best.affected_fields,
+            evidence=best.evidence,
             sources=sources,
         )
 

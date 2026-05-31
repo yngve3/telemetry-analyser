@@ -1,0 +1,19 @@
+target-version = "py311"
+line-length = 88
+src = [
+  "analysis-module/src",
+  "analysis-service/src",
+  "telemetry-converter/src",
+  "telemetry-source/backend/src",
+]
+extend-exclude = [
+  ".git",
+  ".mypy_cache",
+  ".ruff_cache",
+  ".venv",
+  "dist",
+  "node_modules",
+]
+
+[lint]
+select = ["E9", "F"]

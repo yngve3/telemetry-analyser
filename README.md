@@ -20,8 +20,11 @@ The repository is organized as independent modules connected through shared cont
 
 - [Project architecture](docs/architecture.md)
 - [Documentation structure](docs/documentation.md)
+- [Static analysis and security checks](tools/static-analysis/README.md)
 
 ## Running Tests
+
+Module-level unit and integration tests:
 
 ```powershell
 python -B -m unittest discover -s analysis-module\tests
@@ -30,13 +33,34 @@ python -B -m unittest discover -s telemetry-converter\tests
 python -B -m unittest discover -s telemetry-source\backend\tests
 ```
 
-End-to-end tests run against the root Docker Compose stack:
+End-to-end tests live in [e2e-tests](e2e-tests/README.md) and run against the
+root Docker Compose stack. The current E2E scope covers rule-based analysis only
+without ML/NN detectors.
 
 ```powershell
+docker compose up --build -d --wait
 cd e2e-tests
 npm install
 npm run install:browsers
 npm test
+```
+
+To run E2E tests in a Playwright Docker container instead of installing local
+browsers:
+
+```powershell
+docker run --rm `
+  --network telemetry-analyser_default `
+  --ipc=host `
+  -v "${PWD}:/work" `
+  -v telemetry-e2e-node-modules:/work/e2e-tests/node_modules `
+  -w /work/e2e-tests `
+  -e E2E_ANALYSIS_BASE_URL=http://analysis-service:8010 `
+  -e E2E_TELEMETRY_SOURCE_BASE_URL=http://telemetry-source-backend:8000 `
+  -e E2E_VIEWER_BASE_URL=http://telemetry-viewer `
+  -e E2E_STREAM_TARGET_HOST=analysis-service `
+  mcr.microsoft.com/playwright:v1.60.0-noble `
+  sh -lc "npm ci && npm test"
 ```
 
 The telemetry source backend includes synthetic mission execution, runtime anomaly injection, shared-contract telemetry validation, and continuous MAVLink-over-UDP publication.

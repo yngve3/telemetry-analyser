@@ -28,14 +28,11 @@ class GpsSpoofingRule:
         current: UnifiedTelemetry,
         history: TelemetryHistory,
     ) -> DetectedAnomaly | None:
-        previous = history.previous()
+        previous = _previous_with_elapsed(history, current)
         if previous is None:
             return None
 
         elapsed_sec = elapsed_seconds(previous, current)
-        if elapsed_sec <= 0.0:
-            return None
-
         distance_delta_m = distance_meters(previous, current)
         if distance_delta_m < self.min_distance_delta_m:
             return None
@@ -62,11 +59,22 @@ class GpsSpoofingRule:
             message="GPS position changed faster than the reported motion allows.",
             confidence=confidence,
             detector_name=self.name,
+            affected_fields=("latitude_deg", "longitude_deg", "ground_speed_m_s"),
             evidence={
                 "distance_delta_m": distance_delta_m,
-                "elapsed_sec": elapsed_sec,
-                "implied_speed_m_s": implied_speed_m_s,
+                "time_delta_s": elapsed_sec,
+                "calculated_speed_m_s": implied_speed_m_s,
                 "reported_speed_m_s": reported_speed_m_s,
-                "allowed_speed_m_s": allowed_speed_m_s,
+                "threshold_m_s": allowed_speed_m_s,
             },
         )
+
+
+def _previous_with_elapsed(
+    history: TelemetryHistory,
+    current: UnifiedTelemetry,
+) -> UnifiedTelemetry | None:
+    for previous in reversed(history.samples()):
+        if elapsed_seconds(previous, current) > 0.0:
+            return previous
+    return None

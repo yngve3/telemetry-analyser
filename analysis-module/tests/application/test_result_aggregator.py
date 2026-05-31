@@ -18,6 +18,7 @@ class ResultAggregatorTest(unittest.TestCase):
             message="GPS jump.",
             confidence=0.7,
             detector_name="rule_based",
+            affected_fields=("latitude_deg", "longitude_deg"),
             evidence={"distance_delta_m": 130.4},
         )
         ml_anomaly = DetectedAnomaly(
@@ -26,6 +27,8 @@ class ResultAggregatorTest(unittest.TestCase):
             message="ML confirmed GPS jump.",
             confidence=0.9,
             detector_name="ml",
+            source="ml",
+            affected_fields=("feature_window",),
             evidence={"score": 0.91},
         )
 
@@ -49,6 +52,9 @@ class ResultAggregatorTest(unittest.TestCase):
         self.assertEqual(result.anomalies[0].type, AnomalyType.GPS_SPOOFING)
         self.assertEqual(result.anomalies[0].severity, Severity.CRITICAL)
         self.assertEqual(result.anomalies[0].confidence, 0.9)
+        self.assertEqual(result.anomalies[0].source, "ml")
+        self.assertEqual(result.anomalies[0].detector_name, "ml")
+        self.assertEqual(result.anomalies[0].evidence["score"], 0.91)
         self.assertEqual(
             [source.detector for source in result.anomalies[0].sources],
             ["rule_based", "ml"],

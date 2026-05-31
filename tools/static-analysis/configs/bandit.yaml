@@ -1,0 +1,14 @@
+exclude_dirs:
+  - .git
+  - .mypy_cache
+  - .ruff_cache
+  - .venv
+  - node_modules
+  - dist
+  - telemetry-source/frontend
+  - telemetry-viewer/frontend
+  - e2e-tests
+skips:
+  - B101
+  - B104
+  - B311

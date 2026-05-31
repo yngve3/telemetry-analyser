@@ -54,6 +54,7 @@ class BatteryDropRule:
             message="Battery percentage dropped faster than expected.",
             confidence=confidence,
             detector_name=self.name,
+            affected_fields=("battery_percent",),
             evidence={
                 "drop_percent": drop_percent,
                 "elapsed_sec": elapsed_sec,

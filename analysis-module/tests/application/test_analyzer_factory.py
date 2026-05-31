@@ -37,6 +37,18 @@ class AnalyzerFactoryTest(unittest.TestCase):
 
         self.assertEqual(result.anomalies[0].type, AnomalyType.BATTERY_DROP)
 
+    def test_rule_thresholds_are_read_from_analyzer_config(self) -> None:
+        analyzer = create_rule_based_analyzer(
+            AnalyzerConfig(
+                enabled_rules=("impossible_altitude",),
+                thresholds={"impossible_altitude.max_altitude_m": 100.0},
+            )
+        )
+
+        result = analyzer.analyze_next(telemetry(altitude_m=120.0))
+
+        self.assertEqual(result.anomalies[0].type, AnomalyType.IMPOSSIBLE_ALTITUDE)
+
     def test_enabled_model_detector_without_artifact_is_rejected(self) -> None:
         with self.assertRaises(DetectorConfigurationError):
             create_analyzer(

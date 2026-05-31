@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, Field
 
@@ -55,7 +55,7 @@ class ListenerResponse(BaseModel):
 
     @classmethod
     def from_record(cls, record: ListenerRecord) -> "ListenerResponse":
-        return cls(**record.to_dict())
+        return cls(**cast(Any, record.to_dict()))
 
 
 class ListenerDeletedResponse(BaseModel):

@@ -20,8 +20,11 @@ from analysis_service.application import (
     unified_telemetry_from_mapping,
     unified_telemetry_to_dict,
 )
-from analysis_service.presentation.api.dependencies import SessionManagerDep
-from analysis_service.presentation.api.dependencies import IngestionManagerDep
+from analysis_service.presentation.api.dependencies import (
+    IngestionManagerDep,
+    SessionManagerDep,
+    TelemetrySchemaValidatorDep,
+)
 from analysis_service.presentation.api.schemas.analysis import (
     AnalyzeRequest,
     TelemetryPayloadFormat,
@@ -34,8 +37,14 @@ from analysis_service.presentation.api.schemas.sessions import (
     AnalysisSessionResponse,
     AnalysisSessionStateResponse,
 )
+from analysis_service.validation import (
+    JsonSchemaTelemetryValidator,
+    TelemetryValidationError,
+)
 
 router = APIRouter(prefix="/analysis/sessions", tags=["analysis"])
+
+_MAX_PAYLOAD_BASE64_LENGTH = 65_536
 
 
 @router.post(
@@ -152,35 +161,50 @@ async def analyze(
     session_id: str,
     request: AnalyzeRequest,
     manager: SessionManagerDep,
+    telemetry_validator: TelemetrySchemaValidatorDep,
 ) -> dict[str, Any]:
-    telemetry = _telemetry_from_request(request)
+    telemetry = _telemetry_from_request(request, telemetry_validator)
     try:
         result = manager.analyze(session_id, telemetry)
+    except TelemetryValidationError as exc:
+        raise _bad_telemetry_request(exc) from exc
     except SessionNotFoundError as exc:
         raise _session_not_found(session_id) from exc
     return result.to_dict()
 
 
-def _telemetry_from_request(request: AnalyzeRequest):
+def _telemetry_from_request(
+    request: AnalyzeRequest,
+    telemetry_validator: JsonSchemaTelemetryValidator,
+):
     if request.format is TelemetryPayloadFormat.UNIFIED_TELEMETRY:
         if request.telemetry is None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Field `telemetry` is required for unified.telemetry payloads.",
             )
-        return unified_telemetry_from_mapping(request.telemetry.to_dict())
+        try:
+            telemetry_validator.validate_payload(request.telemetry)
+        except TelemetryValidationError as exc:
+            raise _bad_telemetry_request(exc) from exc
+        return unified_telemetry_from_mapping(request.telemetry)
 
     if request.payload_base64 is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Field `payload_base64` is required for mavlink.v2 payloads.",
+        )
+    if len(request.payload_base64) > _MAX_PAYLOAD_BASE64_LENGTH:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Field `payload_base64` is too large.",
         )
 
     try:
         payload = base64.b64decode(request.payload_base64, validate=True)
     except binascii.Error as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Field `payload_base64` must contain valid base64 data.",
         ) from exc
 
@@ -188,15 +212,19 @@ def _telemetry_from_request(request: AnalyzeRequest):
         converted = convert(payload, source_format=TelemetryInputFormat.MAVLINK_V2)
     except ConversionError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
         ) from exc
 
     if not isinstance(converted, UnifiedTelemetryPayload):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Converted telemetry payload has an unsupported type.",
         )
+    try:
+        telemetry_validator.validate_payload(converted.to_dict())
+    except TelemetryValidationError as exc:
+        raise _bad_telemetry_request(exc) from exc
     return unified_telemetry_from_converter_payload(converted)
 
 
@@ -204,4 +232,11 @@ def _session_not_found(session_id: str) -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
         detail=f"Analysis session {session_id!r} was not found.",
+    )
+
+
+def _bad_telemetry_request(exc: TelemetryValidationError) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=exc.to_detail(),
     )

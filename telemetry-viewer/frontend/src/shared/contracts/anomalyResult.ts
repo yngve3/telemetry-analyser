@@ -13,9 +13,11 @@ export type AggregatedAnomaly = {
   severity: Severity;
   message: string;
   confidence: number;
+  source: string;
   sources: AnomalySource[];
-  detector_name?: string | null;
-  evidence?: Record<string, string | number | boolean | null> | null;
+  detector_name: string;
+  affected_fields: string[];
+  evidence: Record<string, string | number | boolean | null>;
 };
 
 export type DetectedAnomaly = {
@@ -23,7 +25,9 @@ export type DetectedAnomaly = {
   severity: Severity;
   message: string;
   confidence: number;
+  source: string;
   detector_name: string;
+  affected_fields: string[];
   evidence: Record<string, string | number | boolean | null>;
 };
 

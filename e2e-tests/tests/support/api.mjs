@@ -1,4 +1,5 @@
 import { expect } from "@playwright/test";
+import dgram from "node:dgram";
 
 export const env = {
   analysisBaseUrl: process.env.E2E_ANALYSIS_BASE_URL ?? "http://127.0.0.1:8010",
@@ -75,6 +76,25 @@ export async function postJson(request, url, data, expectedStatus = 200) {
 export async function deleteJson(request, url, expectedStatus = 200) {
   const response = await request.delete(url);
   return readExpectedJson(response, expectedStatus);
+}
+
+export async function sendUdpPacket(host, port, payload) {
+  const socket = dgram.createSocket("udp4");
+  const message = Buffer.isBuffer(payload) ? payload : Buffer.from(payload);
+
+  try {
+    await new Promise((resolve, reject) => {
+      socket.send(message, port, host, (error) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve();
+        }
+      });
+    });
+  } finally {
+    socket.close();
+  }
 }
 
 export async function readExpectedJson(response, expectedStatus) {
@@ -245,7 +265,12 @@ export async function waitForListenerSamples(request, listenerId) {
   );
 }
 
-export async function waitForLastResult(request, sessionId, predicate) {
+export async function waitForLastResult(
+  request,
+  sessionId,
+  predicate,
+  options = {},
+) {
   return waitForValue(
     async () => {
       const payload = await getJson(
@@ -256,7 +281,8 @@ export async function waitForLastResult(request, sessionId, predicate) {
     },
     (result) => Boolean(result) && predicate(result),
     "session last result",
-    20_000,
+    options.timeoutMs ?? 20_000,
+    options.intervalMs ?? 250,
   );
 }
 
@@ -278,6 +304,7 @@ export async function waitForValue(
   predicate,
   description,
   timeoutMs = 15_000,
+  intervalMs = 250,
 ) {
   const startedAt = Date.now();
   let lastValue = null;
@@ -287,7 +314,7 @@ export async function waitForValue(
     if (predicate(lastValue)) {
       return lastValue;
     }
-    await delay(250);
+    await delay(intervalMs);
   }
 
   throw new Error(

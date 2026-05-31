@@ -61,6 +61,14 @@ class ImuSpikeRule:
             message="IMU attitude or angular-rate data contains a sudden spike.",
             confidence=1.0,
             detector_name=self.name,
+            affected_fields=(
+                "roll_rad",
+                "pitch_rad",
+                "yaw_rad",
+                "roll_rate_rad_s",
+                "pitch_rate_rad_s",
+                "yaw_rate_rad_s",
+            ),
             evidence={
                 "max_rate_rad_s": max_rate,
                 "max_attitude_change_rad_s": max_attitude_change_rate,

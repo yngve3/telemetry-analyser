@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 from pydantic import BaseModel
-from typing import Any
 
 from analysis_service.application import AnalysisSession
 from analysis_service.presentation.api.schemas.profiles import (
@@ -28,7 +29,7 @@ class AnalysisSessionResponse(BaseModel):
 
     @classmethod
     def from_session(cls, session: AnalysisSession) -> "AnalysisSessionResponse":
-        return cls(**session.to_dict())
+        return cls(**cast(Any, session.to_dict()))
 
 
 class AnalysisSessionDeletedResponse(BaseModel):

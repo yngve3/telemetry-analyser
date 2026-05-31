@@ -9,11 +9,17 @@ from fastapi import Depends
 
 from analysis_service.application import IngestionManager, SessionManager
 from analysis_service.infrastructure.listeners import UdpMavlinkListener
+from analysis_service.validation import JsonSchemaTelemetryValidator
 
 
 @lru_cache(maxsize=1)
 def get_session_manager() -> SessionManager:
     return SessionManager()
+
+
+@lru_cache(maxsize=1)
+def get_telemetry_schema_validator() -> JsonSchemaTelemetryValidator:
+    return JsonSchemaTelemetryValidator.load_default()
 
 
 _ingestion_manager: IngestionManager | None = None
@@ -42,3 +48,7 @@ def get_cached_ingestion_manager() -> IngestionManager | None:
 
 SessionManagerDep = Annotated[SessionManager, Depends(get_session_manager)]
 IngestionManagerDep = Annotated[IngestionManager, Depends(get_ingestion_manager)]
+TelemetrySchemaValidatorDep = Annotated[
+    JsonSchemaTelemetryValidator,
+    Depends(get_telemetry_schema_validator),
+]

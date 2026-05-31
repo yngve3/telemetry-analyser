@@ -11,6 +11,7 @@ from analysis_module.domain import (
     Severity,
     UnifiedTelemetry,
 )
+from analysis_module.domain.anomalies import EvidenceValue
 from analysis_module.features.feature_extractor import distance_meters, elapsed_seconds
 from analysis_module.features.telemetry_history import TelemetryHistory
 
@@ -37,6 +38,11 @@ class MotionInconsistencyRule:
                 reported_speed_m_s=current.ground_speed_m_s,
                 reference_speed_m_s=vector_speed_m_s,
                 source="velocity_vector",
+                affected_fields=(
+                    "ground_speed_m_s",
+                    "velocity_x_m_s",
+                    "velocity_y_m_s",
+                ),
             )
 
         previous = history.previous()
@@ -52,6 +58,12 @@ class MotionInconsistencyRule:
             reported_speed_m_s=current.ground_speed_m_s,
             reference_speed_m_s=implied_speed_m_s,
             source="position_delta",
+            affected_fields=(
+                "timestamp",
+                "latitude_deg",
+                "longitude_deg",
+                "ground_speed_m_s",
+            ),
             extra_evidence={
                 "distance_delta_m": distance_delta_m,
                 "elapsed_sec": elapsed_sec,
@@ -63,6 +75,7 @@ class MotionInconsistencyRule:
         reported_speed_m_s: float,
         reference_speed_m_s: float,
         source: str,
+        affected_fields: tuple[str, ...],
         extra_evidence: dict[str, float] | None = None,
     ) -> DetectedAnomaly | None:
         if reference_speed_m_s < self.min_reference_speed_m_s:
@@ -72,7 +85,7 @@ class MotionInconsistencyRule:
         if speed_delta_m_s <= self.max_speed_delta_m_s:
             return None
 
-        evidence = {
+        evidence: dict[str, EvidenceValue] = {
             "reported_speed_m_s": reported_speed_m_s,
             "reference_speed_m_s": reference_speed_m_s,
             "speed_delta_m_s": speed_delta_m_s,
@@ -93,6 +106,7 @@ class MotionInconsistencyRule:
             message="Telemetry motion fields report inconsistent speeds.",
             confidence=min(1.0, 0.5 + speed_delta_m_s / 20.0),
             detector_name=self.name,
+            affected_fields=affected_fields,
             evidence=evidence,
         )
 

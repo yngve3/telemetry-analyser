@@ -68,7 +68,9 @@ class DetectedAnomaly:
     severity: Severity
     message: str
     confidence: float = 1.0
+    source: str = "rule_based"
     detector_name: str = "unknown"
+    affected_fields: tuple[str, ...] = ()
     evidence: dict[str, EvidenceValue] = field(default_factory=dict)
     sources: tuple[AnomalySource, ...] = ()
 
@@ -78,7 +80,9 @@ class DetectedAnomaly:
             "severity": self.severity.value,
             "message": self.message,
             "confidence": self.confidence,
+            "source": self.source,
             "detector_name": self.detector_name,
+            "affected_fields": list(self.affected_fields),
             "evidence": self.evidence,
         }
         if include_sources:

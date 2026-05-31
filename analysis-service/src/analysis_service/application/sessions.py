@@ -14,6 +14,7 @@ from analysis_module import (
 )
 
 from analysis_service.application.profiles import AnalysisProfile
+from analysis_service.validation import UnifiedTelemetryValidator
 
 
 class SessionNotFoundError(KeyError):
@@ -33,8 +34,13 @@ class AnalysisSession:
     samples_analyzed: int = 0
     last_telemetry: UnifiedTelemetry | None = None
     last_result: AnomalyResult | None = None
+    telemetry_validator: UnifiedTelemetryValidator = field(
+        default_factory=UnifiedTelemetryValidator,
+        repr=False,
+    )
 
     def analyze(self, telemetry: UnifiedTelemetry) -> AnomalyResult:
+        self.telemetry_validator.validate(telemetry)
         result = self.analyzer.analyze_next(telemetry)
         self.drone_id = telemetry.drone_id
         self.samples_analyzed += 1

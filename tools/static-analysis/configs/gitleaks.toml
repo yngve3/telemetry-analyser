@@ -1,0 +1,11 @@
+title = "Telemetry Analyser gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Generated artifacts and package lock files that do not contain project secrets."
+paths = [
+  '''.*\.png$''',
+  '''.*package-lock\.json$''',
+]

@@ -45,10 +45,11 @@ class TelemetryGapRule:
             message="Telemetry stream has a larger than expected time gap.",
             confidence=1.0,
             detector_name=self.name,
+            affected_fields=("timestamp",),
             evidence={
-                "elapsed_sec": elapsed_sec,
-                "max_elapsed_sec": self.max_elapsed_sec,
                 "previous_timestamp": previous.timestamp.isoformat(),
                 "current_timestamp": current.timestamp.isoformat(),
+                "gap_ms": int(elapsed_sec * 1000),
+                "threshold_ms": int(self.max_elapsed_sec * 1000),
             },
         )

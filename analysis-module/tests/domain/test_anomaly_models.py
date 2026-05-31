@@ -22,12 +22,16 @@ class AnomalyModelsTest(unittest.TestCase):
             severity=Severity.WARNING,
             message="GPS jump.",
             confidence=0.86,
+            source="rule_based",
             detector_name="GpsSpoofingRule",
+            affected_fields=("latitude_deg", "longitude_deg"),
             evidence={"distance_delta_m": 130.4},
         )
 
         self.assertEqual(anomaly.confidence, 0.86)
+        self.assertEqual(anomaly.source, "rule_based")
         self.assertEqual(anomaly.detector_name, "GpsSpoofingRule")
+        self.assertEqual(anomaly.affected_fields, ("latitude_deg", "longitude_deg"))
         self.assertEqual(anomaly.evidence["distance_delta_m"], 130.4)
 
     def test_result_reports_anomaly_presence_and_detector_outputs(self) -> None:
@@ -106,6 +110,8 @@ class AnomalyModelsTest(unittest.TestCase):
 
         self.assertEqual(payload["has_anomalies"], True)
         self.assertIn("rule_based", payload["detector_outputs"])
+        self.assertEqual(payload["anomalies"][0]["source"], "rule_based")
+        self.assertIn("affected_fields", payload["anomalies"][0])
         self.assertEqual(
             payload["anomalies"][0]["sources"][0]["detector"],
             "rule_based",

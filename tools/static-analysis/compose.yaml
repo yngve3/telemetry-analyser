@@ -1,0 +1,17 @@
+services:
+  static-analysis:
+    build:
+      context: ../..
+      dockerfile: tools/static-analysis/Dockerfile
+    image: telemetry-static-analysis:local
+    working_dir: /workspace
+    volumes:
+      - ../..:/workspace
+      - static-analysis-viewer-node-modules:/workspace/telemetry-viewer/frontend/node_modules
+      - static-analysis-npm-cache:/root/.npm
+      - static-analysis-pip-cache:/root/.cache/pip
+
+volumes:
+  static-analysis-viewer-node-modules:
+  static-analysis-npm-cache:
+  static-analysis-pip-cache:

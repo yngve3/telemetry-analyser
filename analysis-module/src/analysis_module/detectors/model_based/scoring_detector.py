@@ -59,7 +59,9 @@ class ScoringDetector:
                     severity=severity,
                     message="Model score exceeded the configured anomaly threshold.",
                     confidence=score.confidence,
+                    source=self.kind.value,
                     detector_name=self.name,
+                    affected_fields=("feature_window",),
                     evidence={
                         "score": score.score,
                         "threshold": score.threshold,

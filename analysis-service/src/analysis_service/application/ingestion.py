@@ -235,6 +235,18 @@ class IngestionManager:
             raise ListenerConfigurationError("Only UDP listeners are supported.")
         if config.format is not ListenerPayloadFormat.MAVLINK_V2:
             raise ListenerConfigurationError("Only mavlink.v2 listeners are supported.")
+        for record in self._listeners.values():
+            if record.status not in (ListenerStatus.STARTING, ListenerStatus.ACTIVE):
+                continue
+            if (
+                record.config.protocol == config.protocol
+                and record.config.bind_host == config.bind_host
+                and record.config.bind_port == config.bind_port
+            ):
+                raise ListenerConfigurationError(
+                    "Telemetry listener already exists on "
+                    f"{config.bind_host}:{config.bind_port}."
+                )
 
     async def _wait_for_listener_start(self, record: ListenerRecord) -> None:
         for _ in range(10):

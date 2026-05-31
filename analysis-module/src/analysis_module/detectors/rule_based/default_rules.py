@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
+from typing import Any
 
 from analysis_module.detectors.rule_based.rules.battery_drop import BatteryDropRule
 from analysis_module.detectors.rule_based.rules.gps_signal_loss import (
@@ -32,7 +33,7 @@ def create_default_rules(
     """Create the default deterministic rule set."""
 
     values = thresholds or {}
-    registered_rules: tuple[tuple[str, TelemetryRule], ...] = (
+    registered_rules: list[tuple[str, Any]] = [
         (
             "gps_signal_loss",
             GpsSignalLossRule(
@@ -159,7 +160,7 @@ def create_default_rules(
                 ),
             ),
         ),
-    )
+    ]
 
     rules = tuple(rule for _, rule in registered_rules)
     if enabled_rules is None:

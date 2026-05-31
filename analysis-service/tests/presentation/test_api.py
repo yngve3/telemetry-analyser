@@ -247,6 +247,36 @@ class AnalysisServiceApiTest(unittest.TestCase):
         listener_response = self.client.get(f"/analysis/listeners/{listener_id}")
         self.assertEqual(listener_response.status_code, 404)
 
+    def test_listener_endpoint_conflict_is_rejected(self) -> None:
+        port = _free_udp_port()
+        self.client.post("/analysis/sessions", json={"session_id": "first"})
+        self.client.post("/analysis/sessions", json={"session_id": "second"})
+        first_response = self.client.post(
+            "/analysis/listeners",
+            json={
+                "session_id": "first",
+                "protocol": "udp",
+                "format": "mavlink.v2",
+                "bind_host": "127.0.0.1",
+                "bind_port": port,
+            },
+        )
+        self.assertEqual(first_response.status_code, 201)
+
+        second_response = self.client.post(
+            "/analysis/listeners",
+            json={
+                "session_id": "second",
+                "protocol": "udp",
+                "format": "mavlink.v2",
+                "bind_host": "127.0.0.1",
+                "bind_port": port,
+            },
+        )
+
+        self.assertEqual(second_response.status_code, 422)
+        self.assertIn("already exists", second_response.json()["detail"])
+
     def test_lifespan_shutdown_stops_active_listeners(self) -> None:
         port = _free_udp_port()
         get_session_manager.cache_clear()

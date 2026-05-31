@@ -46,6 +46,7 @@ class GpsSignalLossRule:
             message="GPS signal is unavailable or below the required fix quality.",
             confidence=1.0 if has_satellite_loss else 0.8,
             detector_name=self.name,
+            affected_fields=("satellites", "satellites_visible", "gps_fix_type"),
             evidence={
                 "satellites_visible": satellites,
                 "gps_fix_type": fix_type,

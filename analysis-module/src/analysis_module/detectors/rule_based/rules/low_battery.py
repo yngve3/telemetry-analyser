@@ -47,6 +47,7 @@ class LowBatteryRule:
             message=f"Battery level is low: {current.battery_percent:.1f}%.",
             confidence=confidence,
             detector_name=self.name,
+            affected_fields=("battery_percent",),
             evidence={
                 "battery_percent": current.battery_percent,
                 "warning_threshold_percent": self.warning_threshold_percent,
