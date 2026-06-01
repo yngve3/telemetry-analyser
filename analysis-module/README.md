@@ -34,6 +34,7 @@ Stable public imports are kept in `analysis_module.__init__`:
 - `TelemetryAnalyzer`
 - `TelemetryDetector`
 - `AnalyzerConfig`
+- `create_adaptive_correlation_based_detector()`
 - `create_default_analyzer()`
 - `create_rule_based_analyzer()`
 - `create_rule_based_detector()`
@@ -107,6 +108,8 @@ family for service-level enable/disable logic:
 - `rule_based` - fully implemented deterministic rules;
 - `correlation_based` - cross-channel checks over temporal dynamics and
   relationships between telemetry parameters;
+- `adaptive_correlation_based` - stateful consistency checks with a gated
+  normal-behavior profile;
 - `isolation_forest` - trainable baseline fitted on a recent normal-behavior
   feature window;
 - `autoencoder` - reconstruction-error detector exposed as one pluggable
@@ -123,6 +126,35 @@ models, not part of the current implementation.
 
 Unknown detector names are rejected by `create_detectors()` with
 `DetectorConfigurationError`.
+
+## Adaptive Correlation Profile
+
+`AdaptiveCorrelationBasedDetector` can run immediately with static safety
+thresholds. It also maintains a sliding profile of normal consistency errors:
+
+- `position_speed_error`
+- `altitude_velocity_error`
+- `heading_yaw_error`
+
+The detector calculates errors during `analyze()` and stores them as a pending
+profile update. The analyzer pipeline commits that update only after final
+aggregation confirms that the current sample has no anomalies. If any detector
+contributes to a final anomaly, the pending update is discarded. This prevents
+confirmed anomalous windows from becoming part of the normal profile.
+
+While the profile has fewer than `min_profile_samples`, static thresholds remain
+active. Once enough normal samples are collected, the detector uses:
+
+```text
+threshold = max(static_threshold, percentile(profile_errors) * multiplier)
+```
+
+The profile is session-local because `analysis-service` creates a separate
+analyzer instance per analysis session.
+
+For future persistence, the profile exposes `to_dict()` and `from_dict()`.
+Filesystem or database storage should stay in an infrastructure adapter; the
+detector itself does not read or write profile files.
 
 ## Feature Extraction
 

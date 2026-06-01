@@ -2,6 +2,7 @@
 
 from analysis_module.application.analyzer_factory import (
     DetectorConfigurationError,
+    create_adaptive_correlation_based_detector,
     create_autoencoder_detector,
     create_correlation_based_detector,
     create_detectors,
@@ -32,6 +33,7 @@ __all__ = [
     "ResultAggregator",
     "TelemetryDetector",
     "TelemetryAnalyzer",
+    "create_adaptive_correlation_based_detector",
     "create_autoencoder_detector",
     "create_correlation_based_detector",
     "create_detectors",

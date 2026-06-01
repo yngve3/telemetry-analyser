@@ -57,6 +57,7 @@ class AnalysisServiceApiTest(unittest.TestCase):
             [
                 "rule_based",
                 "correlation_based",
+                "adaptive_correlation_based",
                 "isolation_forest",
                 "autoencoder",
                 "graph_based",
@@ -65,6 +66,7 @@ class AnalysisServiceApiTest(unittest.TestCase):
         statuses = {item["name"]: item["status"] for item in payload["models"]}
         self.assertEqual(statuses["rule_based"], "available")
         self.assertEqual(statuses["correlation_based"], "available")
+        self.assertEqual(statuses["adaptive_correlation_based"], "available")
         self.assertEqual(statuses["isolation_forest"], "available")
         self.assertEqual(statuses["autoencoder"], "available")
         self.assertEqual(statuses["graph_based"], "planned")
@@ -79,6 +81,7 @@ class AnalysisServiceApiTest(unittest.TestCase):
             [
                 "rule_based",
                 "correlation_based",
+                "adaptive_correlation_based",
                 "isolation_forest",
                 "autoencoder",
                 "graph_based",
@@ -95,6 +98,7 @@ class AnalysisServiceApiTest(unittest.TestCase):
             [
                 "rules_only",
                 "rules_with_correlation",
+                "rules_with_adaptive_correlation",
                 "rules_with_isolation_forest",
                 "full_hybrid",
             ],
@@ -106,6 +110,14 @@ class AnalysisServiceApiTest(unittest.TestCase):
         )
         self.assertEqual(
             profiles["rules_with_correlation"]["unavailable_models"],
+            [],
+        )
+        self.assertEqual(
+            profiles["rules_with_adaptive_correlation"]["status"],
+            "available",
+        )
+        self.assertEqual(
+            profiles["rules_with_adaptive_correlation"]["unavailable_models"],
             [],
         )
         self.assertEqual(

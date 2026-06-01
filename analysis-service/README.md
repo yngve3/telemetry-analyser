@@ -46,8 +46,13 @@ Profiles use service-facing model names:
 
 - `rules_only`
 - `rules_with_correlation`
+- `rules_with_adaptive_correlation`
 - `rules_with_isolation_forest`
 - `full_hybrid`
+
+`adaptive_correlation_based` is stateful per analysis session. Its normal
+profile is updated by `analysis-module` only after final aggregation confirms
+that the current sample has no anomalies.
 
 Only models with status `available` can be enabled for runtime analysis. Models
 with `planned` are exposed for API visibility, but requests that enable them are

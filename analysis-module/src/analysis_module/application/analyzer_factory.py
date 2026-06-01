@@ -8,6 +8,8 @@ from analysis_module.application.config import AnalyzerConfig
 from analysis_module.application.detector import TelemetryDetector
 from analysis_module.application.pipeline_analyzer import DetectorPipelineAnalyzer
 from analysis_module.detectors.model_based import (
+    AdaptiveCorrelationBasedDetector,
+    AdaptiveCorrelationProfile,
     AutoencoderDetector,
     CorrelationBasedDetector,
     IsolationForestDetector,
@@ -25,6 +27,8 @@ _DETECTOR_NAME_ALIASES = {
     "rule_based": "rule_based",
     "correlation": "correlation_based",
     "correlation_based": "correlation_based",
+    "adaptive_correlation": "adaptive_correlation_based",
+    "adaptive_correlation_based": "adaptive_correlation_based",
     "isolation_forest": "isolation_forest",
     "isolationforest": "isolation_forest",
     "autoencoder": "autoencoder",
@@ -95,6 +99,71 @@ def create_correlation_based_detector(
             analyzer_config,
             "correlation_based.min_voltage_drop_v",
             0.2,
+        ),
+    )
+
+
+def create_adaptive_correlation_based_detector(
+    config: AnalyzerConfig | None = None,
+) -> AdaptiveCorrelationBasedDetector:
+    """Create the adaptive correlation-based detector."""
+
+    analyzer_config = config or AnalyzerConfig()
+    return AdaptiveCorrelationBasedDetector(
+        max_ground_speed_delta_m_s=_threshold(
+            analyzer_config,
+            "adaptive_correlation_based.max_ground_speed_delta_m_s",
+            _threshold(
+                analyzer_config,
+                "correlation_based.max_ground_speed_delta_m_s",
+                8.0,
+            ),
+        ),
+        max_vertical_speed_delta_m_s=_threshold(
+            analyzer_config,
+            "adaptive_correlation_based.max_vertical_speed_delta_m_s",
+            _threshold(
+                analyzer_config,
+                "correlation_based.max_vertical_speed_delta_m_s",
+                3.0,
+            ),
+        ),
+        max_heading_yaw_delta_deg=_threshold(
+            analyzer_config,
+            "adaptive_correlation_based.max_heading_yaw_delta_deg",
+            45.0,
+        ),
+        min_heading_distance_m=_threshold(
+            analyzer_config,
+            "adaptive_correlation_based.min_heading_distance_m",
+            0.5,
+        ),
+        min_message_quality=_threshold(
+            analyzer_config,
+            "adaptive_correlation_based.min_message_quality",
+            0.7,
+        ),
+        profile=AdaptiveCorrelationProfile(
+            max_size=_int_threshold(
+                analyzer_config,
+                "adaptive_correlation_based.profile_size",
+                1_000,
+            ),
+            min_samples=_int_threshold(
+                analyzer_config,
+                "adaptive_correlation_based.min_profile_samples",
+                100,
+            ),
+            percentile=_threshold(
+                analyzer_config,
+                "adaptive_correlation_based.percentile",
+                0.99,
+            ),
+            threshold_multiplier=_threshold(
+                analyzer_config,
+                "adaptive_correlation_based.threshold_multiplier",
+                1.2,
+            ),
         ),
     )
 
@@ -170,6 +239,8 @@ def create_detectors(
         detectors.append(create_rule_based_detector(analyzer_config))
     if "correlation_based" in detector_names:
         detectors.append(create_correlation_based_detector(analyzer_config))
+    if "adaptive_correlation_based" in detector_names:
+        detectors.append(create_adaptive_correlation_based_detector(analyzer_config))
     if "isolation_forest" in detector_names:
         detectors.append(create_isolation_forest_detector(analyzer_config))
     if "autoencoder" in detector_names:

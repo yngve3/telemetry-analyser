@@ -1,5 +1,9 @@
 """Model-based anomaly detection interfaces."""
 
+from analysis_module.detectors.model_based.adaptive_correlation_based import (
+    AdaptiveCorrelationBasedDetector,
+    AdaptiveCorrelationProfile,
+)
 from analysis_module.detectors.model_based.autoencoder import AutoencoderDetector
 from analysis_module.detectors.model_based.correlation_based import (
     CorrelationBasedDetector,
@@ -26,6 +30,8 @@ from analysis_module.detectors.model_based.neural_models import (
 from analysis_module.detectors.model_based.scoring_detector import ScoringDetector
 
 __all__ = [
+    "AdaptiveCorrelationBasedDetector",
+    "AdaptiveCorrelationProfile",
     "AutoencoderDetector",
     "AutoencoderArtifactScoringModel",
     "CorrelationBasedDetector",

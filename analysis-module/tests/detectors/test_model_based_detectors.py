@@ -6,10 +6,15 @@ from support import seconds_after, telemetry
 
 from analysis_module import (  # noqa: E402
     AnalysisContext,
+    AnalyzerConfig,
     AnomalyType,
+    DetectorPipelineAnalyzer,
     DetectorKind,
+    create_rule_based_detector,
 )
 from analysis_module.detectors.model_based import (  # noqa: E402
+    AdaptiveCorrelationBasedDetector,
+    AdaptiveCorrelationProfile,
     AutoencoderDetector,
     CorrelationBasedDetector,
     IsolationForestDetector,
@@ -115,6 +120,88 @@ class ModelBasedDetectorsTest(unittest.TestCase):
         self.assertIn("reconstruction_error", output.anomalies[0].evidence)
         self.assertTrue(output.anomalies[0].probable_cause)
 
+    def test_adaptive_correlation_detector_uses_static_threshold_before_profile_ready(
+        self,
+    ) -> None:
+        history = TelemetryHistory()
+        history.append(_stationary_sample(0))
+        detector = AdaptiveCorrelationBasedDetector(
+            max_ground_speed_delta_m_s=5.0,
+            profile=AdaptiveCorrelationProfile(min_samples=10),
+        )
+
+        output = detector.analyze(
+            AnalysisContext(
+                current=_stationary_sample(1, ground_speed_m_s=20.0),
+                history=history,
+            )
+        )
+
+        self.assertEqual(output.detector_kind, DetectorKind.MODEL_BASED)
+        self.assertEqual(output.anomalies[0].type, AnomalyType.MOTION_INCONSISTENCY)
+        self.assertEqual(output.anomalies[0].detector_name, "adaptive_correlation_based")
+        self.assertEqual(
+            output.anomalies[0].evidence["threshold_sources"][
+                "position_speed_error"
+            ],
+            "static",
+        )
+        self.assertEqual(detector.profile.count("position_speed_error"), 0)
+
+    def test_adaptive_profile_updates_after_clear_pipeline_result(self) -> None:
+        detector = AdaptiveCorrelationBasedDetector(
+            max_ground_speed_delta_m_s=5.0,
+            max_vertical_speed_delta_m_s=5.0,
+            profile=AdaptiveCorrelationProfile(max_size=10, min_samples=2),
+        )
+        analyzer = DetectorPipelineAnalyzer(
+            detectors=(detector,),
+            history=TelemetryHistory(),
+        )
+
+        analyzer.analyze_next(_stationary_sample(0))
+        analyzer.analyze_next(_stationary_sample(1))
+        analyzer.analyze_next(_stationary_sample(2))
+
+        self.assertEqual(detector.profile.count("position_speed_error"), 2)
+        payload = detector.profile.to_dict()
+        restored_profile = AdaptiveCorrelationProfile.from_dict(payload)
+        self.assertEqual(restored_profile.count("position_speed_error"), 2)
+        self.assertEqual(
+            restored_profile.adaptive_threshold("position_speed_error"),
+            detector.profile.adaptive_threshold("position_speed_error"),
+        )
+
+        result = analyzer.analyze_next(
+            _stationary_sample(3, ground_speed_m_s=20.0)
+        )
+
+        self.assertTrue(result.has_anomalies)
+        self.assertEqual(detector.profile.count("position_speed_error"), 2)
+
+    def test_adaptive_profile_skips_update_when_another_detector_confirms_anomaly(
+        self,
+    ) -> None:
+        detector = AdaptiveCorrelationBasedDetector(
+            max_ground_speed_delta_m_s=5.0,
+            profile=AdaptiveCorrelationProfile(max_size=10, min_samples=2),
+        )
+        analyzer = DetectorPipelineAnalyzer(
+            detectors=(
+                detector,
+                create_rule_based_detector(
+                    AnalyzerConfig(enabled_rules=("low_battery",))
+                ),
+            ),
+            history=TelemetryHistory(),
+        )
+
+        analyzer.analyze_next(_stationary_sample(0, battery_percent=90.0))
+        result = analyzer.analyze_next(_stationary_sample(1, battery_percent=10.0))
+
+        self.assertTrue(result.has_anomalies)
+        self.assertEqual(detector.profile.count("position_speed_error"), 0)
+
 
 def _normal_history() -> TelemetryHistory:
     history = TelemetryHistory()
@@ -134,6 +221,27 @@ def _normal_history() -> TelemetryHistory:
             )
         )
     return history
+
+
+def _stationary_sample(
+    seconds: int,
+    ground_speed_m_s: float = 0.0,
+    battery_percent: float = 90.0,
+):
+    return telemetry(
+        timestamp=seconds_after(seconds),
+        latitude_deg=55.7558,
+        longitude_deg=37.6173,
+        altitude_m=120.0,
+        battery_percent=battery_percent,
+        ground_speed_m_s=ground_speed_m_s,
+        vertical_speed_m_s=0.0,
+        velocity_x_m_s=ground_speed_m_s,
+        velocity_y_m_s=0.0,
+        velocity_z_m_s=0.0,
+        yaw_rad=0.0,
+        message_quality=1.0,
+    )
 
 
 if __name__ == "__main__":

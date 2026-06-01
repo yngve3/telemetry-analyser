@@ -44,6 +44,8 @@ Implemented model-based detectors:
 
 - `correlation_based` - analyzes temporal dynamics and relationships between
   telemetry channels;
+- `adaptive_correlation_based` - analyzes the same consistency relationships
+  with a session-local profile of normal errors;
 - `isolation_forest` - fits an Isolation Forest baseline to a recent feature
   window;
 - `autoencoder` - reports reconstruction-error anomalies as a pluggable
@@ -63,6 +65,28 @@ Classical ML and neural-network models are not separate analyzer levels. They ar
 concrete detector implementations under `DetectorKind.MODEL_BASED`. If a
 model-based detector cannot classify an anomaly as a concrete domain type, it
 returns `ANOMALOUS_BEHAVIOR`.
+
+## Adaptive Profile Updates
+
+Adaptive detectors do not update their profiles inside `analyze()`. They expose a
+pending profile update and wait for the pipeline-level decision:
+
+```text
+detectors produce outputs
+-> ResultAggregator builds final AnomalyResult
+-> if AnomalyResult has no anomalies: commit profile update
+-> otherwise: discard profile update
+```
+
+This keeps the normal-behavior profile from learning confirmed anomalous
+telemetry. The adaptive correlation detector still uses static thresholds before
+its profile is ready, so analysis remains useful without an initial calibration
+flight. A normal calibration segment improves the adaptive thresholds but is not
+required for startup.
+
+Profile persistence is represented as plain data through `to_dict()` and
+`from_dict()`. Reading or writing a profile file belongs to an infrastructure
+adapter outside the detector.
 
 ## Boundary
 

@@ -38,6 +38,11 @@ Detector results are aggregated inside the module. A diagnostic layer enriches
 final anomalies with `probable_cause`, `cause_confidence`,
 `diagnostic_evidence`, and `recommended_action`.
 
+Adaptive detectors that maintain a normal-behavior profile update that profile
+only after the final aggregated result confirms that the current telemetry sample
+is not anomalous. Static safety thresholds remain active before calibration is
+complete.
+
 ### telemetry-converter
 
 Owns conversion from external telemetry payloads into the internal `UnifiedTelemetry` format.

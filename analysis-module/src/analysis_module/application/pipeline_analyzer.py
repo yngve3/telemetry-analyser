@@ -6,7 +6,10 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 from analysis_module.application.context import AnalysisContext
-from analysis_module.application.detector import TelemetryDetector
+from analysis_module.application.detector import (
+    ProfileFeedbackDetector,
+    TelemetryDetector,
+)
 from analysis_module.application.result_aggregator import ResultAggregator
 from analysis_module.domain import AnomalyResult, DetectorOutput, UnifiedTelemetry
 from analysis_module.features.feature_extractor import TelemetryFeatureExtractor
@@ -26,15 +29,17 @@ class DetectorPipelineAnalyzer:
     feature_window_size: int | None = None
 
     def analyze_next(self, telemetry: UnifiedTelemetry) -> AnomalyResult:
-        outputs = self.analyze_next_with_outputs(telemetry)
-        return self.result_aggregator.aggregate_outputs(telemetry, outputs)
+        outputs = self._run_detectors(telemetry)
+        result = self.result_aggregator.aggregate_outputs(telemetry, outputs)
+        self._apply_profile_feedback(result)
+        self.history.append(telemetry)
+        return result
 
     def analyze_next_with_outputs(
         self,
         telemetry: UnifiedTelemetry,
     ) -> tuple[DetectorOutput, ...]:
-        context = self._build_context(telemetry)
-        outputs = tuple(detector.analyze(context) for detector in self.detectors)
+        outputs = self._run_detectors(telemetry)
         self.history.append(telemetry)
         return outputs
 
@@ -42,6 +47,22 @@ class DetectorPipelineAnalyzer:
         """Backward-compatible alias for older callers."""
 
         return self.analyze_next(telemetry)
+
+    def _run_detectors(
+        self,
+        telemetry: UnifiedTelemetry,
+    ) -> tuple[DetectorOutput, ...]:
+        context = self._build_context(telemetry)
+        return tuple(detector.analyze(context) for detector in self.detectors)
+
+    def _apply_profile_feedback(self, result: AnomalyResult) -> None:
+        for detector in self.detectors:
+            if not isinstance(detector, ProfileFeedbackDetector):
+                continue
+            if result.has_anomalies:
+                detector.discard_profile_update()
+            else:
+                detector.commit_profile_update()
 
     def _build_context(self, telemetry: UnifiedTelemetry) -> AnalysisContext:
         feature_window = None

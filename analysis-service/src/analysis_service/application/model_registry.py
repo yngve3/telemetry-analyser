@@ -99,6 +99,14 @@ _MODELS: tuple[AnalysisModelInfo, ...] = (
         aliases=("correlation",),
     ),
     AnalysisModelInfo(
+        name="adaptive_correlation_based",
+        implementation="AdaptiveCorrelationBasedDetector",
+        status=AnalysisModelStatus.AVAILABLE,
+        detector_name="adaptive_correlation_based",
+        description="Adaptive consistency model with a gated normal-behavior profile.",
+        aliases=("adaptive_correlation",),
+    ),
+    AnalysisModelInfo(
         name="isolation_forest",
         implementation="IsolationForestDetector",
         status=AnalysisModelStatus.AVAILABLE,
@@ -132,6 +140,11 @@ _MODEL_PROFILES: tuple[AnalysisModelProfileInfo, ...] = (
         name="rules_with_correlation",
         models=("rule_based", "correlation_based"),
         description="Combine rules with cross-parameter correlation analysis.",
+    ),
+    AnalysisModelProfileInfo(
+        name="rules_with_adaptive_correlation",
+        models=("rule_based", "adaptive_correlation_based"),
+        description="Combine rules with adaptive cross-parameter consistency analysis.",
     ),
     AnalysisModelProfileInfo(
         name="rules_with_isolation_forest",

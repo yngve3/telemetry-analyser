@@ -10,6 +10,7 @@ from analysis_module import (  # noqa: E402
     AnomalyType,
     DetectorConfigurationError,
     DetectorKind,
+    create_adaptive_correlation_based_detector,
     create_autoencoder_detector,
     create_correlation_based_detector,
     create_detectors,
@@ -47,6 +48,7 @@ class DetectorApiTest(unittest.TestCase):
                 enabled_detectors=(
                     "rule_based",
                     "correlation_based",
+                    "adaptive_correlation_based",
                     "isolation_forest",
                     "autoencoder",
                 ),
@@ -59,6 +61,7 @@ class DetectorApiTest(unittest.TestCase):
             [
                 "rule_based",
                 "correlation_based",
+                "adaptive_correlation_based",
                 "isolation_forest",
                 "autoencoder",
             ],
@@ -67,30 +70,40 @@ class DetectorApiTest(unittest.TestCase):
         self.assertEqual(detectors[1].kind, DetectorKind.MODEL_BASED)
         self.assertEqual(detectors[2].kind, DetectorKind.MODEL_BASED)
         self.assertEqual(detectors[3].kind, DetectorKind.MODEL_BASED)
+        self.assertEqual(detectors[4].kind, DetectorKind.MODEL_BASED)
 
     def test_create_detectors_accepts_model_detector_aliases(self) -> None:
         detectors = create_detectors(
             AnalyzerConfig(
-                enabled_detectors=("correlation", "isolationforest"),
+                enabled_detectors=(
+                    "correlation",
+                    "adaptive_correlation",
+                    "isolationforest",
+                ),
                 model_window_size=8,
             )
         )
 
         self.assertEqual(
             [detector.name for detector in detectors],
-            ["correlation_based", "isolation_forest"],
+            [
+                "correlation_based",
+                "adaptive_correlation_based",
+                "isolation_forest",
+            ],
         )
 
     def test_model_detector_factories_use_model_based_kind(self) -> None:
         detectors = (
             create_correlation_based_detector(),
+            create_adaptive_correlation_based_detector(),
             create_isolation_forest_detector(AnalyzerConfig(model_window_size=8)),
             create_autoencoder_detector(AnalyzerConfig(model_window_size=8)),
         )
 
         self.assertEqual(
             [detector.kind for detector in detectors],
-            [DetectorKind.MODEL_BASED] * 3,
+            [DetectorKind.MODEL_BASED] * 4,
         )
 
     def test_create_detectors_rejects_legacy_ml_nn_names(self) -> None:
