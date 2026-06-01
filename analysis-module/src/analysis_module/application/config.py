@@ -16,4 +16,6 @@ class AnalyzerConfig:
     enabled_rules: tuple[str, ...] | None = None
     thresholds: Mapping[str, float] = field(default_factory=dict)
     model_artifact_path: str | Path | None = None
+    adaptive_correlation_profile_path: str | Path | None = None
+    isolation_forest_artifact_path: str | Path | None = None
     model_window_size: int = 50

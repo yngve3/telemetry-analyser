@@ -15,10 +15,12 @@ from analysis_module import (  # noqa: E402
 from analysis_module.detectors.model_based import (  # noqa: E402
     AdaptiveCorrelationBasedDetector,
     AdaptiveCorrelationProfile,
+    IsolationForestArtifactModel,
     AutoencoderDetector,
     CorrelationBasedDetector,
     IsolationForestDetector,
 )
+from analysis_module.application.reason_diagnostics import FeatureStatistics  # noqa: E402
 from analysis_module.features import TelemetryHistory  # noqa: E402
 
 
@@ -90,12 +92,52 @@ class ModelBasedDetectorsTest(unittest.TestCase):
         self.assertIn("score", output.anomalies[0].evidence)
         self.assertTrue(output.anomalies[0].affected_parameters)
 
-    def test_autoencoder_detector_detects_reconstruction_error(self) -> None:
+    def test_isolation_forest_artifact_adds_reason_diagnostics(self) -> None:
+        history = TelemetryHistory()
+        history.append(
+            telemetry(
+                timestamp=seconds_after(0),
+                gps_eph=0.2,
+                gps_epv=0.3,
+            )
+        )
+        detector = IsolationForestDetector(
+            window_size=2,
+            min_window_size=2,
+            artifact_model=IsolationForestArtifactModel(
+                model=_FakeIsolationForestModel(),
+                scaler=_IdentityScaler(),
+                feature_names=("eph_mean", "epv_mean", "battery_warning_max"),
+                threshold=0.0,
+                window_size=2,
+                feature_statistics={
+                    "eph_mean": FeatureStatistics(mean=0.0, std=1.0),
+                    "epv_mean": FeatureStatistics(mean=0.0, std=1.0),
+                    "battery_warning_max": FeatureStatistics(mean=0.0, std=1.0),
+                },
+            ),
+        )
+
+        output = detector.analyze(
+            AnalysisContext(
+                current=telemetry(
+                    timestamp=seconds_after(1),
+                    gps_eph=20.0,
+                    gps_epv=10.0,
+                ),
+                history=history,
+            )
+        )
+
+        self.assertEqual(output.anomalies[0].detector_name, "isolation_forest")
+        self.assertEqual(output.anomalies[0].reasons[0].group, "GPS")
+        self.assertIn("reasons", output.anomalies[0].diagnostic_evidence)
+
+    def test_autoencoder_detector_reports_not_ready_without_artifact(self) -> None:
         history = _normal_history()
         detector = AutoencoderDetector(
             window_size=8,
             min_window_size=5,
-            reconstruction_error_threshold=1.0,
         )
 
         output = detector.analyze(
@@ -111,14 +153,8 @@ class ModelBasedDetectorsTest(unittest.TestCase):
         )
 
         self.assertEqual(output.detector_kind, DetectorKind.MODEL_BASED)
-        self.assertEqual(output.anomalies[0].type, AnomalyType.ANOMALOUS_BEHAVIOR)
-        self.assertEqual(output.anomalies[0].detector_name, "autoencoder")
-        self.assertEqual(
-            output.anomalies[0].model_name,
-            "autoencoder_reconstruction_baseline_v1",
-        )
-        self.assertIn("reconstruction_error", output.anomalies[0].evidence)
-        self.assertTrue(output.anomalies[0].probable_cause)
+        self.assertEqual(output.status.value, "not_ready")
+        self.assertEqual(output.anomalies, ())
 
     def test_adaptive_correlation_detector_uses_static_threshold_before_profile_ready(
         self,
@@ -242,6 +278,19 @@ def _stationary_sample(
         yaw_rad=0.0,
         message_quality=1.0,
     )
+
+
+class _IdentityScaler:
+    mean_ = [0.0, 0.0, 0.0]
+    scale_ = [1.0, 1.0, 1.0]
+
+    def transform(self, rows):
+        return rows
+
+
+class _FakeIsolationForestModel:
+    def decision_function(self, rows):
+        return [-1.0 for _ in rows]
 
 
 if __name__ == "__main__":

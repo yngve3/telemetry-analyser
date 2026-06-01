@@ -6,7 +6,7 @@ services:
     image: telemetry-source-backend:local
     container_name: telemetry-source-backend
     ports:
-      - "8000:8000"
+      - "0.0.0.0:8000:8000"
     healthcheck:
       test:
         [
@@ -27,7 +27,7 @@ services:
     image: telemetry-source-frontend:local
     container_name: telemetry-source-frontend
     ports:
-      - "3000:80"
+      - "0.0.0.0:3000:80"
     depends_on:
       telemetry-source-backend:
         condition: service_healthy

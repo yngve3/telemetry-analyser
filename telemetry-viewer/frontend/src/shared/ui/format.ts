@@ -44,3 +44,16 @@ export function formatDate(value: string | null | undefined): string {
   }
   return date.toLocaleString();
 }
+
+export function formatDurationMs(value: number | null | undefined): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return "-";
+  }
+  if (value < 10) {
+    return `${value.toFixed(1)} ms`;
+  }
+  if (value < 1000) {
+    return `${Math.round(value)} ms`;
+  }
+  return `${(value / 1000).toFixed(2)} s`;
+}

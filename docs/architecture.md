@@ -41,7 +41,14 @@ final anomalies with `probable_cause`, `cause_confidence`,
 Adaptive detectors that maintain a normal-behavior profile update that profile
 only after the final aggregated result confirms that the current telemetry sample
 is not anomalous. Static safety thresholds remain active before calibration is
-complete.
+complete. An initial adaptive correlation profile can be loaded from the shared
+model artifact directory before session processing starts.
+
+Model-based detectors load trained artifacts from `analysis-module/models` when
+available. The Isolation Forest detector uses the trained sklearn/joblib artifact
+from `analysis-module/models/isolation_forest` and falls back to a lightweight
+runtime baseline if the default artifact cannot be loaded because optional ML
+dependencies are unavailable.
 
 ### telemetry-converter
 

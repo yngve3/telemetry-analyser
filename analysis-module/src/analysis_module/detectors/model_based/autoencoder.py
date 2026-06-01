@@ -14,10 +14,12 @@ from analysis_module.detectors.model_based._windowing import (
 )
 from analysis_module.detectors.model_based.interfaces import TelemetryScoringModel
 from analysis_module.domain import (
+    AnomalyReason,
     AnomalyType,
     DetectedAnomaly,
     DetectorKind,
     DetectorOutput,
+    DetectorStatus,
     Severity,
 )
 from analysis_module.features.feature_extractor import TelemetryFeatureExtractor
@@ -35,11 +37,21 @@ class AutoencoderDetector:
     min_window_size: int = 5
     reconstruction_error_threshold: float = 3.0
     scoring_model: TelemetryScoringModel | None = None
+    allow_statistical_fallback: bool = False
     feature_extractor: TelemetryFeatureExtractor = field(
         default_factory=TelemetryFeatureExtractor
     )
 
     def analyze(self, context: AnalysisContext) -> DetectorOutput:
+        if self.scoring_model is None and not self.allow_statistical_fallback:
+            return self._not_ready_output("Autoencoder artifact is not loaded.")
+        if (
+            self.scoring_model is not None
+            and not getattr(self.scoring_model, "is_ready", True)
+            and not self.allow_statistical_fallback
+        ):
+            return self._not_ready_output("Autoencoder artifact is not ready.")
+
         resolved = resolve_feature_window(
             context,
             window_size=self.window_size,
@@ -54,19 +66,31 @@ class AutoencoderDetector:
         if not reference_rows:
             return self._empty_output()
 
-        score, threshold, confidence, score_metadata = self._score_window(
+        (
+            score,
+            threshold,
+            confidence,
+            score_metadata,
+            feature_scores,
+            reasons,
+        ) = self._score_window(
             resolved.feature_window,
             reference_rows,
             current_row,
+            resolved.samples,
         )
         if score <= threshold:
             return self._empty_output()
 
-        affected_parameters, top_errors = top_feature_deviations(
-            resolved.feature_window.feature_names,
-            reference_rows,
-            current_row,
-        )
+        if feature_scores:
+            top_errors = _top_scores(feature_scores)
+            affected_parameters = tuple(top_errors)
+        else:
+            affected_parameters, top_errors = top_feature_deviations(
+                resolved.feature_window.feature_names,
+                reference_rows,
+                current_row,
+            )
         evidence: dict[str, Any] = {
             "reconstruction_error": score,
             "threshold": threshold,
@@ -75,6 +99,12 @@ class AutoencoderDetector:
         }
         if score_metadata:
             evidence["model_metadata"] = dict(score_metadata)
+        diagnostic_evidence: dict[str, Any] = {}
+        if reasons:
+            diagnostic_evidence = {
+                "reasons": [reason.to_dict() for reason in reasons],
+                "feature_deviation_scores": dict(feature_scores),
+            }
 
         anomaly = DetectedAnomaly(
             type=AnomalyType.ANOMALOUS_BEHAVIOR,
@@ -98,6 +128,8 @@ class AutoencoderDetector:
                 "The latest feature vector is poorly reconstructed from recent "
                 "normal telemetry dynamics."
             ),
+            diagnostic_evidence=diagnostic_evidence,
+            reasons=reasons,
         )
         return DetectorOutput(
             detector_name=self.name,
@@ -110,14 +142,28 @@ class AutoencoderDetector:
         feature_window: FeatureWindow,
         reference_rows: Sequence[Sequence[float]],
         current_row: Sequence[float],
-    ) -> tuple[float, float, float, dict[str, Any]]:
+        samples: Sequence[Any],
+    ) -> tuple[
+        float,
+        float,
+        float,
+        dict[str, Any],
+        dict[str, float],
+        tuple[AnomalyReason, ...],
+    ]:
         if self.scoring_model is not None:
-            model_score = self.scoring_model.score(feature_window)
+            score_samples = getattr(self.scoring_model, "score_samples", None)
+            if callable(score_samples):
+                model_score = score_samples(samples)
+            else:
+                model_score = self.scoring_model.score(feature_window)
             return (
                 model_score.score,
                 model_score.threshold,
                 model_score.confidence,
                 dict(model_score.metadata),
+                dict(model_score.feature_scores),
+                model_score.reasons,
             )
 
         reconstruction_error = normalized_rmse(reference_rows, current_row)
@@ -132,10 +178,20 @@ class AutoencoderDetector:
             self.reconstruction_error_threshold,
             confidence,
             {},
+            {},
+            (),
         )
 
     def _empty_output(self) -> DetectorOutput:
         return DetectorOutput(detector_name=self.name, detector_kind=self.kind)
+
+    def _not_ready_output(self, message: str) -> DetectorOutput:
+        return DetectorOutput(
+            detector_name=self.name,
+            detector_kind=self.kind,
+            status=DetectorStatus.NOT_READY,
+            message=message,
+        )
 
 
 def _model_name(default: str, metadata: dict[str, Any]) -> str:
@@ -146,3 +202,8 @@ def _model_name(default: str, metadata: dict[str, Any]) -> str:
     if isinstance(model_type, str):
         return model_type
     return default
+
+
+def _top_scores(scores: dict[str, float], limit: int = 3) -> dict[str, float]:
+    ranked = sorted(scores.items(), key=lambda item: item[1], reverse=True)
+    return {name: score for name, score in ranked[:limit]}

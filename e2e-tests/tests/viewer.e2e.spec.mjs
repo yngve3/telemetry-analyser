@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import {
+  adaptiveCorrelationProfile,
   analyzeTelemetry,
   anomalyTypes,
   cleanupPipeline,
@@ -48,7 +49,7 @@ test.describe("Viewer E2E", () => {
   test("viewer shows empty rule-based state", async ({ page }) => {
     await openViewer(page);
 
-    await expect(page.getByText("rule_based").first()).toBeVisible();
+    await expect(page.getByText("Rules").first()).toBeVisible();
     await expect(page.getByText("No analysis result yet.")).toBeVisible();
     await expect(page.getByText("No detector output yet.")).toBeVisible();
   });
@@ -160,7 +161,7 @@ test.describe("Viewer E2E", () => {
       await expect(
         page.locator("section.data-panel", { hasText: "Telemetry overview" }),
       ).toContainText(/\d{4}-\d{2}-\d{2}T/);
-      await expect(page.getByText("rule_based").first()).toBeVisible();
+      await expect(page.getByText("Rules").first()).toBeVisible();
       await expect(
         page.locator("section.data-panel", { hasText: "Anomaly results" }),
       ).toContainText(/No anomalies in the latest result\.|found|clear/);
@@ -226,9 +227,9 @@ test.describe("Viewer E2E", () => {
       await openViewer(page);
       await selectSession(page, pipeline.sessionId);
 
-      await expect(page.getByText("GPS_SIGNAL_LOSS").first()).toBeVisible();
+      await expect(page.getByText("GPS signal loss").first()).toBeVisible();
       await expect(page.getByText("critical").first()).toBeVisible();
-      await expect(page.getByText("rule_based").first()).toBeVisible();
+      await expect(page.getByText("Rules").first()).toBeVisible();
 
       expect(consoleErrors).toEqual([]);
     } finally {
@@ -256,11 +257,118 @@ test.describe("Viewer E2E", () => {
       const detectorPanel = page.locator("section.data-panel", {
         hasText: "Detector outputs",
       });
-      await expect(detectorPanel).toContainText("rule_based");
-      await expect(detectorPanel).toContainText("LOW_BATTERY");
+      await expect(detectorPanel).toContainText("Rules");
+      await expect(detectorPanel).toContainText("Low battery");
       await expect(detectorPanel).toContainText(/50%|100%/);
       await detectorPanel.getByText("Evidence").click();
-      await expect(detectorPanel).toContainText("battery_percent");
+      await expect(detectorPanel).toContainText("Battery, %");
+    } finally {
+      await deleteJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/sessions/${sessionId}`,
+      );
+    }
+  });
+
+  test("viewer renders adaptive correlation output and timing", async ({
+    page,
+    request,
+  }) => {
+    const sessionId = uniqueId("viewer-adaptive");
+    const consoleErrors = captureConsoleErrors(page);
+
+    try {
+      await createAnalysisSession(request, {
+        sessionId,
+        profile: adaptiveCorrelationProfile(),
+      });
+      await analyzeTelemetry(
+        request,
+        sessionId,
+        adaptiveTelemetry({ timestamp: "2026-05-24T12:00:00.000Z" }),
+      );
+      await analyzeTelemetry(
+        request,
+        sessionId,
+        adaptiveTelemetry({
+          timestamp: "2026-05-24T12:00:01.000Z",
+          longitude_deg: 8.54562,
+          ground_speed_m_s: 1.9,
+          velocity_y_m_s: 1.9,
+        }),
+      );
+
+      await openViewer(page);
+      await selectSession(page, sessionId);
+
+      const detectorPanel = page.locator("section.data-panel", {
+        hasText: "Detector outputs",
+      });
+      await expect(detectorPanel).toContainText("Adaptive correlation");
+      await expect(detectorPanel).toContainText("No detector anomalies.");
+
+      const timingPanel = page.locator("section.data-panel", {
+        hasText: "Analysis timing",
+      });
+      await expect(timingPanel).toContainText("Total time");
+      await expect(timingPanel).toContainText("Rules");
+      await expect(timingPanel).toContainText("Adaptive correlation");
+      await expect(timingPanel).toContainText(/ms|<1 ms/);
+
+      expect(consoleErrors).toEqual([]);
+    } finally {
+      await deleteJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/sessions/${sessionId}`,
+      );
+    }
+  });
+
+  test("viewer renders aggregated adaptive correlation sources", async ({
+    page,
+    request,
+  }) => {
+    const sessionId = uniqueId("viewer-adaptive-sources");
+    const consoleErrors = captureConsoleErrors(page);
+
+    try {
+      await createAnalysisSession(request, {
+        sessionId,
+        profile: adaptiveCorrelationProfile({
+          enabled_rules: ["motion_inconsistency"],
+        }),
+      });
+      await analyzeTelemetry(
+        request,
+        sessionId,
+        adaptiveTelemetry({ timestamp: "2026-05-24T12:00:00.000Z" }),
+      );
+      await analyzeTelemetry(
+        request,
+        sessionId,
+        adaptiveTelemetry({
+          timestamp: "2026-05-24T12:00:01.000Z",
+          latitude_deg: 47.399742,
+          ground_speed_m_s: 1,
+          velocity_x_m_s: 20,
+          velocity_y_m_s: 0,
+        }),
+      );
+
+      await openViewer(page);
+      await selectSession(page, sessionId);
+
+      const anomalyPanel = page.locator("section.data-panel", {
+        hasText: "Anomaly results",
+      });
+      await expect(anomalyPanel).toContainText("Motion inconsistency");
+      await expect(anomalyPanel).toContainText("Rules");
+      await expect(anomalyPanel).toContainText("Adaptive correlation");
+      await anomalyPanel.getByText("Detector contribution").click();
+      await expect(anomalyPanel).toContainText("Position-speed error");
+      await expect(anomalyPanel).toContainText("Exceeded errors");
+
+      expect(consoleErrors).toEqual([]);
     } finally {
       await deleteJson(
         request,
@@ -281,7 +389,7 @@ test.describe("Viewer E2E", () => {
         hasText: "Analyzers",
       });
       const ruleBasedButton = analyzersPanel.getByRole("button", {
-        name: /rule_based/,
+        name: /Rules/,
       });
 
       await expect(ruleBasedButton).toHaveAttribute("aria-pressed", "true");
@@ -348,4 +456,17 @@ async function metricValue(container, label) {
     .first()
     .textContent();
   return Number(text ?? 0);
+}
+
+function adaptiveTelemetry(overrides = {}) {
+  return telemetryPayload({
+    ground_speed_m_s: 0,
+    vertical_speed_m_s: 0,
+    velocity_x_m_s: 0,
+    velocity_y_m_s: 0,
+    velocity_z_m_s: 0,
+    yaw_rad: 1.5708,
+    message_quality: 1,
+    ...overrides,
+  });
 }

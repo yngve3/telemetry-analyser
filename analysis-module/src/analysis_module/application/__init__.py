@@ -21,6 +21,11 @@ from analysis_module.application.cause_diagnosis import (
 )
 from analysis_module.application.detector import TelemetryDetector
 from analysis_module.application.pipeline_analyzer import DetectorPipelineAnalyzer
+from analysis_module.application.reason_diagnostics import (
+    FeatureStatistics,
+    ReasonDiagnostics,
+    ReasonDiagnosticsResult,
+)
 from analysis_module.application.result_aggregator import ResultAggregator
 
 __all__ = [
@@ -30,6 +35,9 @@ __all__ = [
     "CauseDiagnosisLayer",
     "DetectorConfigurationError",
     "DetectorPipelineAnalyzer",
+    "FeatureStatistics",
+    "ReasonDiagnostics",
+    "ReasonDiagnosticsResult",
     "ResultAggregator",
     "TelemetryDetector",
     "TelemetryAnalyzer",

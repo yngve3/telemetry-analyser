@@ -4,9 +4,10 @@ End-to-end tests for the root `compose.yaml` stack.
 
 ## Scope
 
-The automated set covers the current rule-based E2E scope without ML/NN
-detectors. It includes 33 tests across backend API, UDP MAVLink ingestion,
-synthetic telemetry streams, and viewer UI behavior.
+The automated set covers the current rule-based, adaptive correlation, and
+Isolation Forest E2E scope without the autoencoder detector. It includes 49
+tests across backend API, UDP MAVLink ingestion, synthetic telemetry streams,
+analysis timing, and viewer UI behavior.
 
 - backend health checks;
 - rule-based analysis session creation;
@@ -22,6 +23,19 @@ synthetic telemetry streams, and viewer UI behavior.
 - telemetry gap detection;
 - disabled rule filtering;
 - analysis session state isolation;
+- adaptive correlation analysis session creation;
+- adaptive correlation normal telemetry handling;
+- adaptive correlation position-speed inconsistency detection;
+- adaptive correlation altitude-vertical-speed inconsistency detection;
+- adaptive correlation heading-yaw inconsistency detection;
+- adaptive correlation stale telemetry handling;
+- adaptive correlation normal profile update;
+- rule-based and adaptive correlation anomaly aggregation;
+- analysis timing for adaptive correlation results;
+- last-result timing for adaptive correlation results;
+- hybrid rule/correlation/Isolation Forest analysis without autoencoder;
+- PX4 diagnostic telemetry fields in the hybrid no-autoencoder pipeline;
+- hybrid no-autoencoder motion anomaly handling;
 - UDP MAVLink listener creation;
 - invalid UDP packet handling;
 - session deletion listener cleanup;
@@ -32,6 +46,7 @@ synthetic telemetry streams, and viewer UI behavior.
 - IMU spike injection through the stream;
 - battery drop injection through the stream;
 - stream and listener cleanup;
+- synthetic generator stream with adaptive correlation;
 - viewer dashboard loading;
 - viewer empty rule-based state;
 - viewer session rendering;
@@ -40,6 +55,8 @@ synthetic telemetry streams, and viewer UI behavior.
 - viewer listener live counter updates;
 - viewer GPS signal loss rendering;
 - viewer detector output details;
+- viewer adaptive correlation output and timing rendering;
+- viewer aggregated adaptive correlation source rendering;
 - viewer rule-based profile control.
 
 ## Structure

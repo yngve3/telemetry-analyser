@@ -30,6 +30,21 @@ export function ruleBasedProfile(overrides = {}) {
   };
 }
 
+export function adaptiveCorrelationProfile(overrides = {}) {
+  return {
+    enabled_detectors: ["rule_based", "adaptive_correlation_based"],
+    ...overrides,
+  };
+}
+
+export function hybridWithoutAutoencoderProfile(overrides = {}) {
+  return {
+    enabled_detectors: ["rule_based", "correlation_based", "isolation_forest"],
+    model_window_size: 5,
+    ...overrides,
+  };
+}
+
 export function telemetryPayload(overrides = {}) {
   return {
     timestamp: "2026-05-24T12:00:00.000Z",

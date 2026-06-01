@@ -7,9 +7,12 @@ WORKDIR /app
 
 COPY analysis-module/pyproject.toml analysis-module/README.md ./analysis-module/
 COPY analysis-module/src ./analysis-module/src
+COPY analysis-module/models ./analysis-module/models
 
 COPY telemetry-converter/pyproject.toml telemetry-converter/README.md ./telemetry-converter/
 COPY telemetry-converter/src ./telemetry-converter/src
+
+COPY shared-contracts ./shared-contracts
 
 COPY analysis-service/pyproject.toml analysis-service/README.md ./analysis-service/
 COPY analysis-service/src ./analysis-service/src

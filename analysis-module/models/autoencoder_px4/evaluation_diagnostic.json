@@ -1,0 +1,248 @@
+{
+  "threshold": 0.1756993532180786,
+  "results": [
+    {
+      "flight": "1f492f34-6be4-4131-88a9-58b7fc121bfe",
+      "windows": 4350,
+      "anomalies": 4350,
+      "anomaly_ratio": 1.0,
+      "error_mean": 2.665600299835205,
+      "error_min": 0.18243159353733063,
+      "error_max": 22.86480712890625
+    },
+    {
+      "flight": "2d2597df-9764-4b58-8ef0-7d6ac5122c7d",
+      "windows": 2555,
+      "anomalies": 2555,
+      "anomaly_ratio": 1.0,
+      "error_mean": 4206.9462890625,
+      "error_min": 0.18243853747844696,
+      "error_max": 1047264.6875
+    },
+    {
+      "flight": "626286e3-b54c-42ed-b3ef-c4f82899dd84",
+      "windows": 2700,
+      "anomalies": 2700,
+      "anomaly_ratio": 1.0,
+      "error_mean": 16.43392562866211,
+      "error_min": 0.1823965609073639,
+      "error_max": 319.6183166503906
+    },
+    {
+      "flight": "680fa085-a780-46a3-95ca-2128040b36c2",
+      "windows": 122,
+      "anomalies": 122,
+      "anomaly_ratio": 1.0,
+      "error_mean": 11.747197151184082,
+      "error_min": 8.257347106933594,
+      "error_max": 15.455314636230469
+    },
+    {
+      "flight": "69f75796-8aa9-47bf-988c-af3fccd6eaca",
+      "windows": 3043,
+      "anomalies": 3043,
+      "anomaly_ratio": 1.0,
+      "error_mean": 14297.634765625,
+      "error_min": 0.18798522651195526,
+      "error_max": 816358.3125
+    },
+    {
+      "flight": "6b949b90-26ec-4b34-ba07-cc196d50e999",
+      "windows": 2925,
+      "anomalies": 2925,
+      "anomaly_ratio": 1.0,
+      "error_mean": 11103.544921875,
+      "error_min": 0.18172533810138702,
+      "error_max": 610325.0
+    },
+    {
+      "flight": "b727cd39-a031-4e1f-a1ca-e96fcec74453",
+      "windows": 2876,
+      "anomalies": 2876,
+      "anomaly_ratio": 1.0,
+      "error_mean": 7.231060981750488,
+      "error_min": 0.1811022311449051,
+      "error_max": 43.26970291137695
+    },
+    {
+      "flight": "eab6de17-636b-407a-9e92-230997d82c9e",
+      "windows": 112,
+      "anomalies": 112,
+      "anomaly_ratio": 1.0,
+      "error_mean": 37.29384231567383,
+      "error_min": 16.64701271057129,
+      "error_max": 47.1827392578125
+    },
+    {
+      "flight": "33a47432-46c8-4cf5-ad8f-9ba3c1d05f03",
+      "windows": 3860,
+      "anomalies": 3784,
+      "anomaly_ratio": 0.9803108808290155,
+      "error_mean": 5323.0986328125,
+      "error_min": 0.10301455110311508,
+      "error_max": 650506.9375
+    },
+    {
+      "flight": "62e7654f-c1dc-4a40-b30e-7e5ac48d55dc",
+      "windows": 3392,
+      "anomalies": 3312,
+      "anomaly_ratio": 0.9764150943396226,
+      "error_mean": 3731.819580078125,
+      "error_min": 0.1468535214662552,
+      "error_max": 560059.3125
+    },
+    {
+      "flight": "5ad48dec-aa03-4a65-bc9e-1dd82e60b1af",
+      "windows": 4975,
+      "anomalies": 4820,
+      "anomaly_ratio": 0.9688442211055276,
+      "error_mean": 2657.072021484375,
+      "error_min": 0.13275375962257385,
+      "error_max": 668779.625
+    },
+    {
+      "flight": "45884e3e-dc7a-406c-8133-748e25eb388b",
+      "windows": 3690,
+      "anomalies": 3545,
+      "anomaly_ratio": 0.9607046070460704,
+      "error_mean": 1878.9608154296875,
+      "error_min": 0.15554073452949524,
+      "error_max": 153195.234375
+    },
+    {
+      "flight": "0630c142-5bc6-4662-9864-0bb23dc311ed",
+      "windows": 2635,
+      "anomalies": 2457,
+      "anomaly_ratio": 0.9324478178368122,
+      "error_mean": 10.123324394226074,
+      "error_min": 0.15596206486225128,
+      "error_max": 61.13022994995117
+    },
+    {
+      "flight": "8e15b7eb-285f-47a3-a7a8-884eefc0f459",
+      "windows": 2561,
+      "anomalies": 2243,
+      "anomaly_ratio": 0.8758297540023429,
+      "error_mean": 3128.336181640625,
+      "error_min": 0.13309822976589203,
+      "error_max": 76643.3515625
+    },
+    {
+      "flight": "a5da117e-759f-4121-9495-0c369def087c",
+      "windows": 9136,
+      "anomalies": 7799,
+      "anomaly_ratio": 0.8536558669001751,
+      "error_mean": 0.2511312663555145,
+      "error_min": 0.09790180623531342,
+      "error_max": 0.863690972328186
+    },
+    {
+      "flight": "5e40fb74-edf4-4084-bbbe-1818c36d1544",
+      "windows": 6662,
+      "anomalies": 5422,
+      "anomaly_ratio": 0.8138697087961573,
+      "error_mean": 0.21755433082580566,
+      "error_min": 0.11817306280136108,
+      "error_max": 0.4924992024898529
+    },
+    {
+      "flight": "b0f3733f-a919-4749-919d-b16c0c3ac59e",
+      "windows": 5771,
+      "anomalies": 4518,
+      "anomaly_ratio": 0.7828799168255068,
+      "error_mean": 10263.4375,
+      "error_min": 0.09927800297737122,
+      "error_max": 525598.75
+    },
+    {
+      "flight": "8ec6cbe1-3961-414b-94c6-8d5e252801c4",
+      "windows": 12011,
+      "anomalies": 9281,
+      "anomaly_ratio": 0.7727083506785447,
+      "error_mean": 5563.0546875,
+      "error_min": 0.10436917841434479,
+      "error_max": 493428.625
+    },
+    {
+      "flight": "26042eeb-eea6-4335-99bd-4da163fa1869",
+      "windows": 6005,
+      "anomalies": 4536,
+      "anomaly_ratio": 0.7553705245628642,
+      "error_mean": 12290.3662109375,
+      "error_min": 0.08040143549442291,
+      "error_max": 540013.4375
+    },
+    {
+      "flight": "72156a14-d999-4935-99d5-8a22b945d3eb",
+      "windows": 2587,
+      "anomalies": 1877,
+      "anomaly_ratio": 0.7255508310784693,
+      "error_mean": 7317.88232421875,
+      "error_min": 0.11189932376146317,
+      "error_max": 188058.1875
+    },
+    {
+      "flight": "20a4948a-4325-4e62-bb7c-d39d866fb569",
+      "windows": 6493,
+      "anomalies": 4711,
+      "anomaly_ratio": 0.7255505929462498,
+      "error_mean": 7880.98876953125,
+      "error_min": 0.08675064891576767,
+      "error_max": 568415.5
+    },
+    {
+      "flight": "763359a0-d310-4c94-ac3d-3db16ac8652b",
+      "windows": 10320,
+      "anomalies": 6891,
+      "anomaly_ratio": 0.6677325581395349,
+      "error_mean": 1585.7886962890625,
+      "error_min": 0.091497041285038,
+      "error_max": 491128.5625
+    },
+    {
+      "flight": "9d931092-37d9-458f-8427-952536c3b875",
+      "windows": 3909,
+      "anomalies": 2359,
+      "anomaly_ratio": 0.6034791506779228,
+      "error_mean": 2994.899169921875,
+      "error_min": 0.10495151579380035,
+      "error_max": 314720.4375
+    },
+    {
+      "flight": "85afb868-add6-4fdf-a784-2a09f8fbb3ac",
+      "windows": 11401,
+      "anomalies": 6861,
+      "anomaly_ratio": 0.601789316726603,
+      "error_mean": 1385.628662109375,
+      "error_min": 0.110394686460495,
+      "error_max": 242863.53125
+    },
+    {
+      "flight": "e17553de-a06d-4e0b-8b7d-f4280e280a44",
+      "windows": 2336,
+      "anomalies": 1360,
+      "anomaly_ratio": 0.5821917808219178,
+      "error_mean": 6867.20947265625,
+      "error_min": 0.10179758071899414,
+      "error_max": 188921.484375
+    },
+    {
+      "flight": "76783479-0a39-4fe4-bdb1-6ad072d61630",
+      "windows": 5595,
+      "anomalies": 2966,
+      "anomaly_ratio": 0.5301161751563896,
+      "error_mean": 9012.43359375,
+      "error_min": 0.09625790268182755,
+      "error_max": 638820.0625
+    }
+  ],
+  "summary": {
+    "processed_flights": 26,
+    "total_windows": 122022,
+    "anomalous_windows": 97425,
+    "global_anomaly_ratio": 0.7984215961056202,
+    "high_anomaly_ratio_flights": 26,
+    "medium_anomaly_ratio_flights": 0,
+    "low_anomaly_ratio_flights": 0
+  }
+}

@@ -14,6 +14,8 @@ from analysis_module.detectors.model_based.interfaces import (
     TelemetryScoringModel,
 )
 from analysis_module.detectors.model_based.isolation_forest import (
+    IsolationForestArtifactModel,
+    IsolationForestArtifactScore,
     IsolationForestDetector,
 )
 from analysis_module.detectors.model_based.model_artifact import (
@@ -35,6 +37,8 @@ __all__ = [
     "AutoencoderDetector",
     "AutoencoderArtifactScoringModel",
     "CorrelationBasedDetector",
+    "IsolationForestArtifactModel",
+    "IsolationForestArtifactScore",
     "IsolationForestDetector",
     "ModelArtifact",
     "ModelArtifactError",

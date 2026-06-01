@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from math import inf
 from typing import Any, Protocol
 
+from analysis_module.domain import AnomalyReason
 from analysis_module.features.feature_window import FeatureWindow
 
 
@@ -18,6 +19,8 @@ class ModelScore:
     threshold: float
     confidence: float
     metadata: Mapping[str, Any] = field(default_factory=dict)
+    feature_scores: Mapping[str, float] = field(default_factory=dict)
+    reasons: tuple[AnomalyReason, ...] = ()
 
 
 class TelemetryScoringModel(Protocol):

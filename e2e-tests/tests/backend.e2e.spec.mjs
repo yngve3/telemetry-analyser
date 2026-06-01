@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import {
+  adaptiveCorrelationProfile,
   analyzeTelemetry,
   anomalyTypes,
   cleanupPipeline,
@@ -10,6 +11,7 @@ import {
   env,
   findAnomaly,
   getJson,
+  hybridWithoutAutoencoderProfile,
   injectAnomaly,
   listenerPort,
   ruleBasedProfile,
@@ -218,7 +220,9 @@ test.describe("Backend E2E", () => {
 
       expect(anomaly).toBeTruthy();
       expect(anomaly.sources[0].evidence).toHaveProperty("distance_delta_m");
-      expect(anomaly.sources[0].evidence).toHaveProperty("implied_speed_m_s");
+      expect(anomaly.sources[0].evidence).toHaveProperty(
+        "calculated_speed_m_s",
+      );
     } finally {
       await deleteJson(
         request,
@@ -423,6 +427,561 @@ test.describe("Backend E2E", () => {
     }
   });
 
+  test("create adaptive correlation analysis session", async ({ request }) => {
+    const sessionId = uniqueId("adaptive-session");
+
+    try {
+      await createAnalysisSession(request, {
+        sessionId,
+        profile: adaptiveCorrelationProfile(),
+      });
+
+      const session = await getJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/sessions/${sessionId}`,
+      );
+
+      expect(session.profile.enabled_detectors).toEqual([
+        "rule_based",
+        "adaptive_correlation_based",
+      ]);
+      expect(session.samples_analyzed).toBe(0);
+    } finally {
+      await request.delete(`${env.analysisBaseUrl}/analysis/sessions/${sessionId}`);
+    }
+  });
+
+  test("manual normal telemetry with adaptive correlation profile", async ({
+    request,
+  }) => {
+    const { sessionId } = await createAnalysisSession(request, {
+      sessionId: uniqueId("adaptive-normal"),
+      profile: adaptiveCorrelationProfile(),
+    });
+
+    try {
+      await analyzeTelemetry(
+        request,
+        sessionId,
+        adaptiveTelemetry({ timestamp: "2026-05-24T12:00:00.000Z" }),
+      );
+      const result = await analyzeTelemetry(
+        request,
+        sessionId,
+        adaptiveTelemetry({
+          timestamp: "2026-05-24T12:00:01.000Z",
+          longitude_deg: 8.54562,
+          ground_speed_m_s: 1.9,
+          velocity_x_m_s: 0,
+          velocity_y_m_s: 1.9,
+        }),
+      );
+
+      expect(result.anomalies).toEqual([]);
+      expect(result.detector_outputs).toHaveProperty(
+        "adaptive_correlation_based",
+      );
+      expect(result.detector_outputs.adaptive_correlation_based.status).toBe(
+        "ready",
+      );
+    } finally {
+      await deleteJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/sessions/${sessionId}`,
+      );
+    }
+  });
+
+  test("adaptive correlation detects position-speed inconsistency", async ({
+    request,
+  }) => {
+    const { sessionId } = await createAnalysisSession(request, {
+      sessionId: uniqueId("adaptive-position-speed"),
+      profile: { enabled_detectors: ["adaptive_correlation_based"] },
+    });
+
+    try {
+      await analyzeTelemetry(
+        request,
+        sessionId,
+        adaptiveTelemetry({ timestamp: "2026-05-24T12:00:00.000Z" }),
+      );
+      const result = await analyzeTelemetry(
+        request,
+        sessionId,
+        adaptiveTelemetry({
+          timestamp: "2026-05-24T12:00:01.000Z",
+          latitude_deg: 47.399742,
+          ground_speed_m_s: 1,
+          velocity_x_m_s: 0,
+          velocity_y_m_s: 1,
+        }),
+      );
+      const anomaly = findAnomaly(result, "MOTION_INCONSISTENCY");
+      const source = sourceForDetector(anomaly, "adaptive_correlation_based");
+
+      expect(source).toBeTruthy();
+      expect(source.evidence.errors.position_speed_error).toBeGreaterThan(8);
+      expect(source.evidence.exceeded_errors).toHaveProperty(
+        "position_speed_error",
+      );
+      expect(source.evidence.mode).toBe("calibration");
+    } finally {
+      await deleteJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/sessions/${sessionId}`,
+      );
+    }
+  });
+
+  test("adaptive correlation detects altitude-vertical-speed inconsistency", async ({
+    request,
+  }) => {
+    const { sessionId } = await createAnalysisSession(request, {
+      sessionId: uniqueId("adaptive-altitude"),
+      profile: { enabled_detectors: ["adaptive_correlation_based"] },
+    });
+
+    try {
+      await analyzeTelemetry(
+        request,
+        sessionId,
+        adaptiveTelemetry({
+          timestamp: "2026-05-24T12:00:00.000Z",
+          altitude_m: 30,
+          relative_altitude_m: 30,
+        }),
+      );
+      const result = await analyzeTelemetry(
+        request,
+        sessionId,
+        adaptiveTelemetry({
+          timestamp: "2026-05-24T12:00:01.000Z",
+          altitude_m: 60,
+          relative_altitude_m: 60,
+          vertical_speed_m_s: 0,
+          velocity_z_m_s: 0,
+        }),
+      );
+      const anomaly = findAnomaly(result, "MOTION_INCONSISTENCY");
+      const source = sourceForDetector(anomaly, "adaptive_correlation_based");
+
+      expect(source).toBeTruthy();
+      expect(source.evidence.exceeded_errors).toHaveProperty(
+        "altitude_velocity_error",
+      );
+      expect(anomaly.affected_parameters).toEqual(
+        expect.arrayContaining(["altitude_m", "vertical_speed_m_s"]),
+      );
+    } finally {
+      await deleteJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/sessions/${sessionId}`,
+      );
+    }
+  });
+
+  test("adaptive correlation detects heading-yaw inconsistency", async ({
+    request,
+  }) => {
+    const { sessionId } = await createAnalysisSession(request, {
+      sessionId: uniqueId("adaptive-heading-yaw"),
+      profile: { enabled_detectors: ["adaptive_correlation_based"] },
+    });
+
+    try {
+      await analyzeTelemetry(
+        request,
+        sessionId,
+        adaptiveTelemetry({ timestamp: "2026-05-24T12:00:00.000Z" }),
+      );
+      const result = await analyzeTelemetry(
+        request,
+        sessionId,
+        adaptiveTelemetry({
+          timestamp: "2026-05-24T12:00:01.000Z",
+          longitude_deg: 8.546594,
+          ground_speed_m_s: 75,
+          velocity_x_m_s: 0,
+          velocity_y_m_s: 75,
+          yaw_rad: 3.14159,
+        }),
+      );
+      const anomaly = findAnomaly(result, "MOTION_INCONSISTENCY");
+      const source = sourceForDetector(anomaly, "adaptive_correlation_based");
+
+      expect(source).toBeTruthy();
+      expect(source.evidence.exceeded_errors).toHaveProperty("heading_yaw_error");
+      expect(source.evidence).toHaveProperty("movement_heading_deg");
+      expect(source.evidence).toHaveProperty("yaw_deg");
+    } finally {
+      await deleteJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/sessions/${sessionId}`,
+      );
+    }
+  });
+
+  test("adaptive correlation reports stale telemetry as not ready", async ({
+    request,
+  }) => {
+    const { sessionId } = await createAnalysisSession(request, {
+      sessionId: uniqueId("adaptive-stale"),
+      profile: { enabled_detectors: ["adaptive_correlation_based"] },
+    });
+
+    try {
+      await analyzeTelemetry(
+        request,
+        sessionId,
+        adaptiveTelemetry({ timestamp: "2026-05-24T12:00:00.000Z" }),
+      );
+      const result = await analyzeTelemetry(
+        request,
+        sessionId,
+        adaptiveTelemetry({
+          timestamp: "2026-05-24T12:00:01.000Z",
+          latitude_deg: 47.399742,
+          ground_speed_m_s: 1,
+          message_quality: 0.1,
+        }),
+      );
+
+      expect(result.anomalies).toEqual([]);
+      expect(result.detector_outputs.adaptive_correlation_based.status).toBe(
+        "not_ready",
+      );
+      expect(result.detector_outputs.adaptive_correlation_based.message).toContain(
+        "Telemetry freshness",
+      );
+    } finally {
+      await deleteJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/sessions/${sessionId}`,
+      );
+    }
+  });
+
+  test("adaptive correlation profile updates on normal telemetry", async ({
+    request,
+  }) => {
+    const { sessionId } = await createAnalysisSession(request, {
+      sessionId: uniqueId("adaptive-profile-update"),
+      profile: { enabled_detectors: ["adaptive_correlation_based"] },
+    });
+
+    try {
+      await analyzeTelemetry(
+        request,
+        sessionId,
+        adaptiveTelemetry({ timestamp: "2026-05-24T12:00:00.000Z" }),
+      );
+      await analyzeTelemetry(
+        request,
+        sessionId,
+        adaptiveTelemetry({
+          timestamp: "2026-05-24T12:00:01.000Z",
+          longitude_deg: 8.54562,
+          ground_speed_m_s: 1.9,
+          velocity_y_m_s: 1.9,
+        }),
+      );
+      await analyzeTelemetry(
+        request,
+        sessionId,
+        adaptiveTelemetry({
+          timestamp: "2026-05-24T12:00:02.000Z",
+          longitude_deg: 8.545646,
+          ground_speed_m_s: 1.9,
+          velocity_y_m_s: 1.9,
+        }),
+      );
+      const result = await analyzeTelemetry(
+        request,
+        sessionId,
+        adaptiveTelemetry({
+          timestamp: "2026-05-24T12:00:03.000Z",
+          latitude_deg: 47.399742,
+          longitude_deg: 8.545646,
+          ground_speed_m_s: 1,
+          velocity_y_m_s: 1,
+        }),
+      );
+      const anomaly = findAnomaly(result, "MOTION_INCONSISTENCY");
+      const source = sourceForDetector(anomaly, "adaptive_correlation_based");
+
+      expect(source.evidence.profile_counts.position_speed_error).toBe(2);
+      expect(source.evidence.profile_counts.altitude_velocity_error).toBe(2);
+    } finally {
+      await deleteJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/sessions/${sessionId}`,
+      );
+    }
+  });
+
+  test("rule-based and adaptive correlation aggregate shared anomaly", async ({
+    request,
+  }) => {
+    const { sessionId } = await createAnalysisSession(request, {
+      sessionId: uniqueId("adaptive-aggregation"),
+      profile: adaptiveCorrelationProfile({
+        enabled_rules: ["motion_inconsistency"],
+      }),
+    });
+
+    try {
+      await analyzeTelemetry(
+        request,
+        sessionId,
+        adaptiveTelemetry({ timestamp: "2026-05-24T12:00:00.000Z" }),
+      );
+      const result = await analyzeTelemetry(
+        request,
+        sessionId,
+        adaptiveTelemetry({
+          timestamp: "2026-05-24T12:00:01.000Z",
+          latitude_deg: 47.399742,
+          ground_speed_m_s: 1,
+          velocity_x_m_s: 20,
+          velocity_y_m_s: 0,
+        }),
+      );
+      const motionAnomalies = result.anomalies.filter(
+        (anomaly) => anomaly.type === "MOTION_INCONSISTENCY",
+      );
+      const anomaly = motionAnomalies[0];
+
+      expect(motionAnomalies).toHaveLength(1);
+      expect(anomaly.sources.map((source) => source.detector)).toEqual(
+        expect.arrayContaining(["rule_based", "adaptive_correlation_based"]),
+      );
+      expect(result.detector_outputs.rule_based.anomalies).toHaveLength(1);
+      expect(
+        result.detector_outputs.adaptive_correlation_based.anomalies,
+      ).toHaveLength(1);
+    } finally {
+      await deleteJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/sessions/${sessionId}`,
+      );
+    }
+  });
+
+  test("adaptive correlation result includes timing", async ({ request }) => {
+    const { sessionId } = await createAnalysisSession(request, {
+      sessionId: uniqueId("adaptive-timing"),
+      profile: adaptiveCorrelationProfile(),
+    });
+
+    try {
+      await analyzeTelemetry(
+        request,
+        sessionId,
+        adaptiveTelemetry({ timestamp: "2026-05-24T12:00:00.000Z" }),
+      );
+      const result = await analyzeTelemetry(
+        request,
+        sessionId,
+        adaptiveTelemetry({
+          timestamp: "2026-05-24T12:00:01.000Z",
+          longitude_deg: 8.54562,
+          ground_speed_m_s: 1.9,
+          velocity_y_m_s: 1.9,
+        }),
+      );
+
+      expect(result.timing.total_ms).toBeGreaterThanOrEqual(0);
+      expect(result.timing.detectors.rule_based.duration_ms).toBeGreaterThanOrEqual(
+        0,
+      );
+      expect(
+        result.timing.detectors.adaptive_correlation_based.duration_ms,
+      ).toBeGreaterThanOrEqual(0);
+      expect(result.timing.detectors.rule_based.status).toBe("ready");
+      expect(result.timing.detectors.adaptive_correlation_based.status).toBe(
+        "ready",
+      );
+    } finally {
+      await deleteJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/sessions/${sessionId}`,
+      );
+    }
+  });
+
+  test("adaptive correlation timing is returned in last result", async ({
+    request,
+  }) => {
+    const { sessionId } = await createAnalysisSession(request, {
+      sessionId: uniqueId("adaptive-last-result"),
+      profile: adaptiveCorrelationProfile(),
+    });
+
+    try {
+      await analyzeTelemetry(
+        request,
+        sessionId,
+        adaptiveTelemetry({ timestamp: "2026-05-24T12:00:00.000Z" }),
+      );
+      await analyzeTelemetry(
+        request,
+        sessionId,
+        adaptiveTelemetry({
+          timestamp: "2026-05-24T12:00:01.000Z",
+          longitude_deg: 8.54562,
+          ground_speed_m_s: 1.9,
+          velocity_y_m_s: 1.9,
+        }),
+      );
+      const lastResult = await getJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/sessions/${sessionId}/last-result`,
+      );
+
+      expect(lastResult.result.timing.total_ms).toBeGreaterThanOrEqual(0);
+      expect(lastResult.result.timing.detectors).toHaveProperty(
+        "adaptive_correlation_based",
+      );
+    } finally {
+      await deleteJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/sessions/${sessionId}`,
+      );
+    }
+  });
+
+  test("hybrid analysis without autoencoder exposes expected detectors", async ({
+    request,
+  }) => {
+    const { sessionId } = await createAnalysisSession(request, {
+      sessionId: uniqueId("hybrid-no-autoencoder"),
+      profile: hybridWithoutAutoencoderProfile(),
+    });
+
+    try {
+      const result = await analyzeTelemetry(
+        request,
+        sessionId,
+        telemetryPayload(),
+      );
+
+      expect(Object.keys(result.detector_outputs)).toEqual([
+        "rule_based",
+        "correlation_based",
+        "isolation_forest",
+      ]);
+      expect(result.detector_outputs).not.toHaveProperty("autoencoder");
+      expect(result.detector_outputs.isolation_forest.status).toBe("ready");
+      expect(result.status).toBe("NORMAL");
+      expect(result.risk_level).toBe("NONE");
+    } finally {
+      await deleteJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/sessions/${sessionId}`,
+      );
+    }
+  });
+
+  test("hybrid analysis without autoencoder accepts PX4 diagnostic fields", async ({
+    request,
+  }) => {
+    const { sessionId } = await createAnalysisSession(request, {
+      sessionId: uniqueId("hybrid-px4-fields"),
+      profile: hybridWithoutAutoencoderProfile(),
+    });
+
+    try {
+      const result = await analyzeTelemetry(
+        request,
+        sessionId,
+        telemetryPayload({
+          pos_test_ratio: 0.1,
+          vel_test_ratio: 0.1,
+          hgt_test_ratio: 0.1,
+          mag_test_ratio: 0.1,
+          hdg_test_ratio: 0.1,
+          filter_fault_flags: 0,
+          innovation_check_flags: 0,
+          gps_check_fail_flags: 0,
+          attitude_invalid: 0,
+          angular_velocity_invalid: 0,
+          local_position_invalid: 0,
+          global_position_invalid: 0,
+          local_velocity_invalid: 0,
+          battery_warning: 0,
+          fd_motor_failure: 0,
+          fd_critical_failure: 0,
+          fd_roll: 0,
+          fd_pitch: 0,
+          fd_alt: 0,
+          fd_motor: 0,
+          fd_battery: 0,
+          fd_imbalanced_prop: 0,
+        }),
+      );
+
+      expect(result.detector_outputs).toHaveProperty("isolation_forest");
+      expect(result.detector_outputs).not.toHaveProperty("autoencoder");
+      expect(result.anomalies).toEqual([]);
+    } finally {
+      await deleteJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/sessions/${sessionId}`,
+      );
+    }
+  });
+
+  test("hybrid analysis without autoencoder detects motion anomaly", async ({
+    request,
+  }) => {
+    const { sessionId } = await createAnalysisSession(request, {
+      sessionId: uniqueId("hybrid-motion"),
+      profile: hybridWithoutAutoencoderProfile({
+        enabled_rules: ["motion_inconsistency"],
+      }),
+    });
+
+    try {
+      await analyzeTelemetry(
+        request,
+        sessionId,
+        telemetryPayload({
+          timestamp: "2026-05-24T12:00:00.000Z",
+          ground_speed_m_s: 1,
+          velocity_x_m_s: 1,
+          velocity_y_m_s: 0,
+        }),
+      );
+      const result = await analyzeTelemetry(
+        request,
+        sessionId,
+        telemetryPayload({
+          timestamp: "2026-05-24T12:00:01.000Z",
+          latitude_deg: 47.399742,
+          ground_speed_m_s: 1,
+          velocity_x_m_s: 20,
+          velocity_y_m_s: 0,
+        }),
+      );
+      const anomaly = findAnomaly(result, "MOTION_INCONSISTENCY");
+
+      expect(anomaly).toBeTruthy();
+      expect(anomaly.sources.map((source) => source.detector)).toEqual(
+        expect.arrayContaining(["rule_based", "correlation_based"]),
+      );
+      expect(result.detector_outputs).toHaveProperty("isolation_forest");
+      expect(result.detector_outputs).not.toHaveProperty("autoencoder");
+      expect(result.has_anomalies).toBe(true);
+      expect(result.risk_level).toMatch(/MEDIUM|HIGH/);
+    } finally {
+      await deleteJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/sessions/${sessionId}`,
+      );
+    }
+  });
+
   test("create UDP MAVLink listener", async ({ request }, testInfo) => {
     const { sessionId } = await createAnalysisSession(request, {
       sessionId: uniqueId("listener"),
@@ -614,6 +1173,43 @@ test.describe("Backend E2E", () => {
     }
   });
 
+  test("generator stream normal flight with adaptive correlation", async (
+    { request },
+    testInfo,
+  ) => {
+    const pipeline = await startPipeline(request, testInfo, {
+      profile: adaptiveCorrelationProfile(),
+    });
+
+    try {
+      const listener = await waitForListenerSamples(
+        request,
+        pipeline.listenerId,
+      );
+      const result = await waitForLastResult(
+        request,
+        pipeline.sessionId,
+        (payload) =>
+          Boolean(payload.detector_outputs?.rule_based) &&
+          Boolean(payload.detector_outputs?.adaptive_correlation_based),
+      );
+
+      expect(listener.received_packets).toBeGreaterThan(0);
+      expect(listener.converted_samples).toBeGreaterThan(0);
+      expect(result.detector_outputs.adaptive_correlation_based.status).toMatch(
+        /ready|not_ready/,
+      );
+      expect(result.timing.detectors).toHaveProperty(
+        "adaptive_correlation_based",
+      );
+      expect(
+        result.anomalies.filter((anomaly) => anomaly.severity === "CRITICAL"),
+      ).toEqual([]);
+    } finally {
+      await cleanupPipeline(request, pipeline);
+    }
+  });
+
   test("generator stream to analysis listener: normal flight", async (
     { request },
     testInfo,
@@ -764,3 +1360,20 @@ test.describe("Backend E2E", () => {
     }
   });
 });
+
+function adaptiveTelemetry(overrides = {}) {
+  return telemetryPayload({
+    ground_speed_m_s: 0,
+    vertical_speed_m_s: 0,
+    velocity_x_m_s: 0,
+    velocity_y_m_s: 0,
+    velocity_z_m_s: 0,
+    yaw_rad: 1.5708,
+    message_quality: 1,
+    ...overrides,
+  });
+}
+
+function sourceForDetector(anomaly, detector) {
+  return anomaly?.sources.find((source) => source.detector === detector);
+}

@@ -650,6 +650,10 @@ textarea:focus-visible {
   padding: 10px 12px;
 }
 
+.raw-payload-field {
+  padding: 0 12px 12px;
+}
+
 .inline-details .json-preview {
   max-height: 220px;
   margin-top: 8px;
@@ -887,6 +891,13 @@ textarea:focus-visible {
   gap: 12px;
 }
 
+.detector-output-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
 .detector-output-header strong {
   overflow-wrap: anywhere;
 }
@@ -894,6 +905,89 @@ textarea:focus-visible {
 .raw-anomaly-list {
   display: grid;
   gap: 10px;
+}
+
+.timing-layout {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) minmax(0, 1fr);
+  gap: 12px;
+  padding: 16px;
+}
+
+.timing-total-card {
+  display: grid;
+  align-content: center;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #dae3ee;
+  border-radius: 7px;
+  background: #f8fafc;
+}
+
+.timing-total-card span,
+.timing-total-card strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.timing-total-card span {
+  color: #687484;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.timing-total-card strong {
+  margin-top: 5px;
+  font-size: 22px;
+}
+
+.timing-detector-list {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.timing-detector-row {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid #e0e7f0;
+  border-radius: 7px;
+  background: #f8fafc;
+}
+
+.timing-detector-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.timing-detector-header strong {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.timing-detector-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.timing-track {
+  overflow: hidden;
+  height: 7px;
+  border-radius: 999px;
+  background: #e5ebf3;
+}
+
+.timing-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #245d92;
 }
 
 @media (max-width: 1480px) {
@@ -937,7 +1031,8 @@ textarea:focus-visible {
 
 @media (max-width: 900px) {
   .session-layout,
-  .dashboard-side {
+  .dashboard-side,
+  .timing-layout {
     grid-template-columns: 1fr;
   }
 

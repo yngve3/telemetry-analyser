@@ -5,6 +5,13 @@ import type {
   Severity,
 } from "../../../shared/contracts/anomalyResult";
 import { useI18n } from "../../../shared/i18n/I18nProvider";
+import {
+  formatAnomalyType,
+  formatCause,
+  formatDetectorName,
+  formatMessage,
+  isVisibleDetectorName,
+} from "../../../shared/ui/display";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { JsonPreview } from "../../../shared/ui/JsonPreview";
 import { StatusPill } from "../../../shared/ui/StatusPill";
@@ -66,19 +73,22 @@ function AnomalyCard({
   result: AnomalyResult;
 }) {
   const { t } = useI18n();
+  const visibleSources = anomaly.sources.filter((source) =>
+    isVisibleDetectorName(source.detector),
+  );
   const detectorNames = Array.from(
     new Set([
-      ...anomaly.sources.map((source) => source.detector),
+      ...visibleSources.map((source) => source.detector),
       ...Object.keys(result.detector_outputs),
     ]),
-  );
+  ).filter(isVisibleDetectorName);
 
   return (
     <article className="anomaly-card">
       <div className="anomaly-card-header">
         <div>
-          <strong className="code-title">{anomaly.type}</strong>
-          <p>{anomaly.message}</p>
+          <strong className="code-title">{formatAnomalyType(anomaly.type, t)}</strong>
+          <p>{formatMessage(anomaly.message, t)}</p>
         </div>
         <div className="anomaly-card-meta">
           <StatusPill
@@ -93,10 +103,10 @@ function AnomalyCard({
       </div>
 
       <div className="source-chip-row" aria-label={t("anomalies.sources", "Sources")}>
-        {anomaly.sources.length > 0 ? (
-          anomaly.sources.map((source) => (
+        {visibleSources.length > 0 ? (
+          visibleSources.map((source) => (
             <span className="source-chip confirmed" key={source.detector}>
-              <strong>{source.detector}</strong>
+              <strong>{formatDetectorName(source.detector, t)}</strong>
               <span>{formatConfidence(source.confidence)}</span>
             </span>
           ))
@@ -114,7 +124,7 @@ function AnomalyCard({
           {anomaly.probable_cause ? (
             <span className="source-chip">
               <strong>{t("anomalies.cause", "Cause")}</strong>
-              <span>{anomaly.probable_cause}</span>
+              <span>{formatCause(anomaly.probable_cause, t)}</span>
             </span>
           ) : null}
           {anomaly.cause_confidence !== undefined &&
@@ -128,7 +138,8 @@ function AnomalyCard({
       ) : null}
       {anomaly.recommended_action ? (
         <div className="message">
-          {t("anomalies.action", "Action")}: {anomaly.recommended_action}
+          {t("anomalies.action", "Action")}:{" "}
+          {formatMessage(anomaly.recommended_action, t)}
         </div>
       ) : null}
 
@@ -136,7 +147,9 @@ function AnomalyCard({
         <summary>{t("anomalies.contributions", "Detector contribution")}</summary>
         <div className="contribution-grid">
           {anomaly.sources.map((source) => (
-            <SourceContribution source={source} key={source.detector} />
+            isVisibleDetectorName(source.detector) ? (
+              <SourceContribution source={source} key={source.detector} />
+            ) : null
           ))}
         </div>
       </details>
@@ -157,7 +170,7 @@ function AnomalyCard({
             return (
               <div className="detector-signal" key={detectorName}>
                 <div className="detector-signal-header">
-                  <strong>{detectorName}</strong>
+                  <strong>{formatDetectorName(detectorName, t)}</strong>
                   <StatusPill
                     label={detectorSignalLabel({
                       hasSource: Boolean(source),
@@ -198,7 +211,7 @@ function SourceContribution({ source }: { source: AnomalySource }) {
   return (
     <div className="source-contribution">
       <div className="source-contribution-header">
-        <strong>{source.detector}</strong>
+        <strong>{formatDetectorName(source.detector, t)}</strong>
         <StatusPill label={formatConfidence(source.confidence)} tone="neutral" />
       </div>
       {source.severity ? (
@@ -207,7 +220,9 @@ function SourceContribution({ source }: { source: AnomalySource }) {
           tone={severityTone(source.severity)}
         />
       ) : null}
-      {source.message ? <div className="message">{source.message}</div> : null}
+      {source.message ? (
+        <div className="message">{formatMessage(source.message, t)}</div>
+      ) : null}
       <JsonPreview value={source.evidence} />
     </div>
   );

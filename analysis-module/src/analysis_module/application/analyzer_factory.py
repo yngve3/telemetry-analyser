@@ -12,6 +12,7 @@ from analysis_module.detectors.model_based import (
     AdaptiveCorrelationProfile,
     AutoencoderDetector,
     CorrelationBasedDetector,
+    IsolationForestArtifactModel,
     IsolationForestDetector,
     ModelArtifactError,
     TelemetryScoringModel,
@@ -19,8 +20,12 @@ from analysis_module.detectors.model_based import (
 from analysis_module.detectors.rule_based.analyzer import RuleBasedTelemetryAnalyzer
 from analysis_module.detectors.rule_based.default_rules import create_default_rules
 from analysis_module.detectors.rule_based.detector import RuleBasedDetector
-from analysis_module.infrastructure.artifacts import FilesystemModelArtifactRepository
 from analysis_module.features.telemetry_history import TelemetryHistory
+from analysis_module.infrastructure.artifacts import (
+    FilesystemAdaptiveCorrelationProfileRepository,
+    FilesystemIsolationForestArtifactRepository,
+    FilesystemModelArtifactRepository,
+)
 
 
 _DETECTOR_NAME_ALIASES = {
@@ -109,6 +114,31 @@ def create_adaptive_correlation_based_detector(
     """Create the adaptive correlation-based detector."""
 
     analyzer_config = config or AnalyzerConfig()
+    profile = _load_adaptive_correlation_profile(analyzer_config)
+    if profile is None:
+        profile = AdaptiveCorrelationProfile(
+            max_size=_int_threshold(
+                analyzer_config,
+                "adaptive_correlation_based.profile_size",
+                1_000,
+            ),
+            min_samples=_int_threshold(
+                analyzer_config,
+                "adaptive_correlation_based.min_profile_samples",
+                100,
+            ),
+            percentile=_threshold(
+                analyzer_config,
+                "adaptive_correlation_based.percentile",
+                0.99,
+            ),
+            threshold_multiplier=_threshold(
+                analyzer_config,
+                "adaptive_correlation_based.threshold_multiplier",
+                1.2,
+            ),
+        )
+
     return AdaptiveCorrelationBasedDetector(
         max_ground_speed_delta_m_s=_threshold(
             analyzer_config,
@@ -143,28 +173,7 @@ def create_adaptive_correlation_based_detector(
             "adaptive_correlation_based.min_message_quality",
             0.7,
         ),
-        profile=AdaptiveCorrelationProfile(
-            max_size=_int_threshold(
-                analyzer_config,
-                "adaptive_correlation_based.profile_size",
-                1_000,
-            ),
-            min_samples=_int_threshold(
-                analyzer_config,
-                "adaptive_correlation_based.min_profile_samples",
-                100,
-            ),
-            percentile=_threshold(
-                analyzer_config,
-                "adaptive_correlation_based.percentile",
-                0.99,
-            ),
-            threshold_multiplier=_threshold(
-                analyzer_config,
-                "adaptive_correlation_based.threshold_multiplier",
-                1.2,
-            ),
-        ),
+        profile=profile,
     )
 
 
@@ -174,12 +183,18 @@ def create_isolation_forest_detector(
     """Create the Isolation Forest detector."""
 
     analyzer_config = config or AnalyzerConfig()
+    artifact_model = _load_isolation_forest_artifact(analyzer_config)
+    window_size = (
+        artifact_model.window_size
+        if artifact_model is not None
+        else analyzer_config.model_window_size
+    )
     return IsolationForestDetector(
-        window_size=analyzer_config.model_window_size,
+        window_size=window_size,
         min_window_size=_int_threshold(
             analyzer_config,
             "isolation_forest.min_window_size",
-            8,
+            min(8, window_size),
         ),
         n_trees=_int_threshold(
             analyzer_config,
@@ -196,6 +211,7 @@ def create_isolation_forest_detector(
             "isolation_forest.score_threshold",
             0.65,
         ),
+        artifact_model=artifact_model,
     )
 
 
@@ -206,12 +222,16 @@ def create_autoencoder_detector(
 
     analyzer_config = config or AnalyzerConfig()
     scoring_model = _load_autoencoder_artifact(analyzer_config)
+    window_size = (
+        getattr(scoring_model, "window_size", 0)
+        or analyzer_config.model_window_size
+    )
     return AutoencoderDetector(
-        window_size=analyzer_config.model_window_size,
+        window_size=window_size,
         min_window_size=_int_threshold(
             analyzer_config,
             "autoencoder.min_window_size",
-            5,
+            min(5, window_size),
         ),
         reconstruction_error_threshold=_threshold(
             analyzer_config,
@@ -291,26 +311,112 @@ def _int_threshold(config: AnalyzerConfig, key: str, default: int) -> int:
 def _load_autoencoder_artifact(
     config: AnalyzerConfig,
 ) -> TelemetryScoringModel | None:
-    artifact_path = _resolve_autoencoder_artifact_path(config)
-    if artifact_path is None:
+    if config.model_artifact_path is not None:
+        try:
+            return FilesystemModelArtifactRepository().load(
+                Path(config.model_artifact_path)
+            )
+        except ModelArtifactError as exc:
+            raise DetectorConfigurationError(str(exc)) from exc
+
+    for artifact_path in _autoencoder_artifact_candidates():
+        if not artifact_path.exists():
+            continue
+        try:
+            return FilesystemModelArtifactRepository().load(artifact_path)
+        except ModelArtifactError:
+            continue
+    return None
+
+
+def _load_adaptive_correlation_profile(
+    config: AnalyzerConfig,
+) -> AdaptiveCorrelationProfile | None:
+    profile_path = _resolve_adaptive_correlation_profile_path(config)
+    if profile_path is None:
         return None
 
     try:
-        return FilesystemModelArtifactRepository().load(artifact_path)
+        return FilesystemAdaptiveCorrelationProfileRepository().load(profile_path)
     except ModelArtifactError as exc:
         raise DetectorConfigurationError(str(exc)) from exc
 
 
-def _resolve_autoencoder_artifact_path(config: AnalyzerConfig) -> Path | None:
-    if config.model_artifact_path is not None:
-        return Path(config.model_artifact_path)
+def _load_isolation_forest_artifact(
+    config: AnalyzerConfig,
+) -> IsolationForestArtifactModel | None:
+    resolved = _resolve_isolation_forest_artifact_path(config)
+    if resolved is None:
+        return None
 
-    module_root = Path(__file__).resolve().parents[3]
+    artifact_path, explicit = resolved
+    try:
+        return FilesystemIsolationForestArtifactRepository().load(artifact_path)
+    except ModelArtifactError as exc:
+        if not explicit and "requires joblib and scikit-learn" in str(exc):
+            return None
+        raise DetectorConfigurationError(str(exc)) from exc
+
+
+def _resolve_autoencoder_artifact_path(
+    config: AnalyzerConfig,
+) -> tuple[Path, bool] | None:
+    if config.model_artifact_path is not None:
+        return Path(config.model_artifact_path), True
+
     candidates = (
-        module_root / "models" / "autoencoder",
-        module_root / "models" / "autoencoder.zip",
+        *_model_directory_candidates("autoencoder"),
+        *_model_directory_candidates("autoencoder.zip"),
+    )
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate, False
+    return None
+
+
+def _autoencoder_artifact_candidates() -> tuple[Path, ...]:
+    return (
+        *_model_directory_candidates("autoencoder_px4"),
+        *_model_directory_candidates("autoencoder"),
+        *_model_directory_candidates("autoencoder.zip"),
+    )
+
+
+def _resolve_adaptive_correlation_profile_path(
+    config: AnalyzerConfig,
+) -> Path | None:
+    if config.adaptive_correlation_profile_path is not None:
+        return Path(config.adaptive_correlation_profile_path)
+
+    candidates = (
+        *_model_directory_candidates("adaptive_correlation_profile.json"),
+        *_model_directory_candidates("adaptive_correlation_profile"),
     )
     for candidate in candidates:
         if candidate.exists():
             return candidate
     return None
+
+
+def _resolve_isolation_forest_artifact_path(
+    config: AnalyzerConfig,
+) -> tuple[Path, bool] | None:
+    if config.isolation_forest_artifact_path is not None:
+        return Path(config.isolation_forest_artifact_path), True
+
+    candidates = (
+        *_model_directory_candidates("isolation_forest_px4"),
+        *_model_directory_candidates("isolation_forest"),
+    )
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate, False
+    return None
+
+
+def _model_directory_candidates(name: str) -> tuple[Path, ...]:
+    module_root = Path(__file__).resolve().parents[3]
+    return (
+        module_root / "models" / name,
+        Path.cwd() / "analysis-module" / "models" / name,
+    )

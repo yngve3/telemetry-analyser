@@ -146,6 +146,94 @@
       "type": "number",
       "minimum": 0,
       "maximum": 1
+    },
+    "pos_test_ratio": {
+      "type": "number",
+      "minimum": 0
+    },
+    "vel_test_ratio": {
+      "type": "number",
+      "minimum": 0
+    },
+    "hgt_test_ratio": {
+      "type": "number",
+      "minimum": 0
+    },
+    "mag_test_ratio": {
+      "type": "number",
+      "minimum": 0
+    },
+    "hdg_test_ratio": {
+      "type": "number",
+      "minimum": 0
+    },
+    "filter_fault_flags": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "innovation_check_flags": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "gps_check_fail_flags": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "attitude_invalid": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "angular_velocity_invalid": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "local_position_invalid": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "global_position_invalid": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "local_velocity_invalid": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "battery_warning": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "fd_motor_failure": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "fd_critical_failure": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "fd_roll": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "fd_pitch": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "fd_alt": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "fd_motor": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "fd_battery": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "fd_imbalanced_prop": {
+      "type": "integer",
+      "minimum": 0
     }
   },
   "additionalProperties": false

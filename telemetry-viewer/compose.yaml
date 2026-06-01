@@ -6,7 +6,7 @@ services:
     image: telemetry-viewer:local
     container_name: telemetry-viewer
     ports:
-      - "3001:80"
+      - "0.0.0.0:3001:80"
     depends_on:
       analysis-service:
         condition: service_healthy

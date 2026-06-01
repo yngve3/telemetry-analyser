@@ -27,14 +27,17 @@ export function ManualTelemetryPanel({
         <h2>{t("manual.title", "Manual telemetry")}</h2>
       </div>
       <div className="panel-body">
-        <label className="field">
-          <span>{t("manual.json", "Unified telemetry JSON")}</span>
-          <textarea
-            spellCheck={false}
-            value={telemetryText}
-            onChange={(event) => onTelemetryTextChange(event.target.value)}
-          />
-        </label>
+        <details className="json-details">
+          <summary>{t("manual.payload", "Telemetry payload")}</summary>
+          <label className="field raw-payload-field">
+            <span>{t("manual.json", "Unified telemetry JSON")}</span>
+            <textarea
+              spellCheck={false}
+              value={telemetryText}
+              onChange={(event) => onTelemetryTextChange(event.target.value)}
+            />
+          </label>
+        </details>
         <div className="button-row">
           <button
             className="primary-button"

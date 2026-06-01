@@ -110,8 +110,8 @@ family for service-level enable/disable logic:
   relationships between telemetry parameters;
 - `adaptive_correlation_based` - stateful consistency checks with a gated
   normal-behavior profile;
-- `isolation_forest` - trainable baseline fitted on a recent normal-behavior
-  feature window;
+- `isolation_forest` - trained sklearn Isolation Forest artifact when available,
+  with a standard-library runtime baseline fallback;
 - `autoencoder` - reconstruction-error detector exposed as one pluggable
   model-based detector.
 
@@ -156,6 +156,29 @@ For future persistence, the profile exposes `to_dict()` and `from_dict()`.
 Filesystem or database storage should stay in an infrastructure adapter; the
 detector itself does not read or write profile files.
 
+An initial profile can be loaded from JSON through
+`AnalyzerConfig.adaptive_correlation_profile_path`. When the path is not
+provided, the factory checks these default locations:
+
+- `analysis-module/models/adaptive_correlation_profile.json`
+- `analysis-module/models/adaptive_correlation_profile`
+
+Profile JSON uses the same shape returned by `AdaptiveCorrelationProfile.to_dict()`:
+
+```json
+{
+  "max_size": 1000,
+  "min_samples": 100,
+  "percentile": 0.99,
+  "threshold_multiplier": 1.2,
+  "errors": {
+    "position_speed_error": [],
+    "altitude_velocity_error": [],
+    "heading_yaw_error": []
+  }
+}
+```
+
 ## Feature Extraction
 
 `TelemetryFeatureExtractor` emits features in a fixed order. This order is part of
@@ -163,9 +186,40 @@ the model contract and must not change without a feature version bump.
 
 ## Model Artifact Contract
 
-The model-based layer validates artifact packages but does not require PyTorch or
-sklearn at runtime. A future artifact package must use either a directory or a
-zip file with this structure:
+The model-based layer validates artifact packages. Isolation Forest artifacts
+use sklearn/joblib at runtime. Autoencoder artifacts use a placeholder scoring
+adapter until real neural inference is connected.
+
+### Isolation Forest
+
+The Isolation Forest detector loads a trained artifact from
+`AnalyzerConfig.isolation_forest_artifact_path`. When no explicit path is
+provided, the factory checks:
+
+- `analysis-module/models/isolation_forest`
+
+The artifact directory must contain:
+
+```text
+isolation_forest/
+  model.joblib
+  scaler.joblib
+  metadata.json
+```
+
+`metadata.json` must include `model_type: "isolation_forest"`, `feature_names`,
+`window_size`, and `threshold`. The trained artifact uses the same window feature
+schema produced by `training/scripts/training/train_isolation_forest.py`.
+
+If the default artifact is present but sklearn/joblib is unavailable, the
+factory falls back to the built-in runtime baseline. If an explicit artifact path
+is provided, missing dependencies or invalid artifact files are configuration
+errors.
+
+### Autoencoder
+
+An autoencoder artifact package must use either a directory or a zip file with
+this structure:
 
 ```text
 autoencoder_artifact/

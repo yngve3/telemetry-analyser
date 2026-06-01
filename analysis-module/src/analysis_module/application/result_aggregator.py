@@ -85,6 +85,16 @@ class ResultAggregator:
             key=lambda value: _SEVERITY_RANK[value],
         )
         confidence = max(anomaly.confidence for _, anomaly in items)
+        reason_source = best
+        if not reason_source.reasons:
+            reason_source = next(
+                (
+                    anomaly
+                    for _, anomaly in items
+                    if anomaly.reasons
+                ),
+                best,
+            )
         sources = tuple(
             AnomalySource(
                 detector=output.detector_name,
@@ -114,6 +124,7 @@ class ResultAggregator:
             probable_cause=best.probable_cause,
             cause_confidence=best.cause_confidence,
             diagnostic_evidence=best.diagnostic_evidence,
+            reasons=reason_source.reasons,
             recommended_action=best.recommended_action,
             sources=sources,
         )

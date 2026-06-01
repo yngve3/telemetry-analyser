@@ -1,0 +1,239 @@
+{
+  "threshold": 1.959271910293922e-17,
+  "results": [
+    {
+      "flight": "eab6de17-636b-407a-9e92-230997d82c9e",
+      "windows": 112,
+      "anomalies": 112,
+      "anomaly_ratio": 1.0,
+      "score_mean": -0.08721006219435316,
+      "score_min": -0.10992596059647342,
+      "score_max": -0.042514597350116534
+    },
+    {
+      "flight": "2d2597df-9764-4b58-8ef0-7d6ac5122c7d",
+      "windows": 2555,
+      "anomalies": 1977,
+      "anomaly_ratio": 0.7737769080234833,
+      "score_mean": -0.03181517840167974,
+      "score_min": -0.1403740378165208,
+      "score_max": 0.2116324221911226
+    },
+    {
+      "flight": "62e7654f-c1dc-4a40-b30e-7e5ac48d55dc",
+      "windows": 3392,
+      "anomalies": 2450,
+      "anomaly_ratio": 0.7222877358490566,
+      "score_mean": -0.020795165127928745,
+      "score_min": -0.12215449838009984,
+      "score_max": 0.2148773596613529
+    },
+    {
+      "flight": "b727cd39-a031-4e1f-a1ca-e96fcec74453",
+      "windows": 2876,
+      "anomalies": 1807,
+      "anomaly_ratio": 0.6283031988873435,
+      "score_mean": 0.016303730565898844,
+      "score_min": -0.14427793765121577,
+      "score_max": 0.21564024490009964
+    },
+    {
+      "flight": "626286e3-b54c-42ed-b3ef-c4f82899dd84",
+      "windows": 2700,
+      "anomalies": 1257,
+      "anomaly_ratio": 0.46555555555555556,
+      "score_mean": 0.06042899685396911,
+      "score_min": -0.13953451696019847,
+      "score_max": 0.2123351959260527
+    },
+    {
+      "flight": "6b949b90-26ec-4b34-ba07-cc196d50e999",
+      "windows": 2925,
+      "anomalies": 1196,
+      "anomaly_ratio": 0.4088888888888889,
+      "score_mean": 0.07506524934385535,
+      "score_min": -0.1407133507908518,
+      "score_max": 0.2121229657368554
+    },
+    {
+      "flight": "1f492f34-6be4-4131-88a9-58b7fc121bfe",
+      "windows": 4350,
+      "anomalies": 1500,
+      "anomaly_ratio": 0.3448275862068966,
+      "score_mean": 0.053423031404681166,
+      "score_min": -0.14594038146726973,
+      "score_max": 0.19480917562443673
+    },
+    {
+      "flight": "0630c142-5bc6-4662-9864-0bb23dc311ed",
+      "windows": 2635,
+      "anomalies": 17,
+      "anomaly_ratio": 0.0064516129032258064,
+      "score_mean": 0.15900910264188997,
+      "score_min": -0.022233595925154392,
+      "score_max": 0.2275603548283635
+    },
+    {
+      "flight": "45884e3e-dc7a-406c-8133-748e25eb388b",
+      "windows": 3690,
+      "anomalies": 22,
+      "anomaly_ratio": 0.005962059620596206,
+      "score_mean": 0.15222383570973427,
+      "score_min": -0.019403317779093765,
+      "score_max": 0.2275603548283635
+    },
+    {
+      "flight": "69f75796-8aa9-47bf-988c-af3fccd6eaca",
+      "windows": 3043,
+      "anomalies": 13,
+      "anomaly_ratio": 0.004272099901413079,
+      "score_mean": 0.16502800194638628,
+      "score_min": -0.013495939095524712,
+      "score_max": 0.2275603548283635
+    },
+    {
+      "flight": "33a47432-46c8-4cf5-ad8f-9ba3c1d05f03",
+      "windows": 3860,
+      "anomalies": 7,
+      "anomaly_ratio": 0.0018134715025906736,
+      "score_mean": 0.16934574009305975,
+      "score_min": -0.024049737308958763,
+      "score_max": 0.2275603548283635
+    },
+    {
+      "flight": "20a4948a-4325-4e62-bb7c-d39d866fb569",
+      "windows": 6493,
+      "anomalies": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.17740193895702014,
+      "score_min": 0.03356026053282446,
+      "score_max": 0.23047893932394115
+    },
+    {
+      "flight": "26042eeb-eea6-4335-99bd-4da163fa1869",
+      "windows": 6005,
+      "anomalies": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.17900963885169713,
+      "score_min": 0.032534116263502555,
+      "score_max": 0.22983110186001998
+    },
+    {
+      "flight": "5ad48dec-aa03-4a65-bc9e-1dd82e60b1af",
+      "windows": 4975,
+      "anomalies": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.1953900533646132,
+      "score_min": 0.013728314402606134,
+      "score_max": 0.2275603548283635
+    },
+    {
+      "flight": "5e40fb74-edf4-4084-bbbe-1818c36d1544",
+      "windows": 6662,
+      "anomalies": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.18173000124951674,
+      "score_min": 0.10850658784410294,
+      "score_max": 0.20579582694302956
+    },
+    {
+      "flight": "680fa085-a780-46a3-95ca-2128040b36c2",
+      "windows": 122,
+      "anomalies": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.05431071584249821,
+      "score_min": 0.022800930131540276,
+      "score_max": 0.12969366380064495
+    },
+    {
+      "flight": "72156a14-d999-4935-99d5-8a22b945d3eb",
+      "windows": 2587,
+      "anomalies": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.17468566160973428,
+      "score_min": 0.05513557930215318,
+      "score_max": 0.23385620592229173
+    },
+    {
+      "flight": "763359a0-d310-4c94-ac3d-3db16ac8652b",
+      "windows": 10320,
+      "anomalies": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.2121342973631365,
+      "score_min": 0.06343295482808475,
+      "score_max": 0.23083581813122828
+    },
+    {
+      "flight": "76783479-0a39-4fe4-bdb1-6ad072d61630",
+      "windows": 5595,
+      "anomalies": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.19006877470184375,
+      "score_min": 0.048571510519296646,
+      "score_max": 0.2309118796890235
+    },
+    {
+      "flight": "85afb868-add6-4fdf-a784-2a09f8fbb3ac",
+      "windows": 11401,
+      "anomalies": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.17550097678054571,
+      "score_min": 0.08689399696829991,
+      "score_max": 0.21487131987821773
+    },
+    {
+      "flight": "8e15b7eb-285f-47a3-a7a8-884eefc0f459",
+      "windows": 2561,
+      "anomalies": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.20075640666297137,
+      "score_min": 0.04663648717952229,
+      "score_max": 0.22769815452403952
+    },
+    {
+      "flight": "8ec6cbe1-3961-414b-94c6-8d5e252801c4",
+      "windows": 12011,
+      "anomalies": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.20178478364122382,
+      "score_min": 0.014536240001772338,
+      "score_max": 0.229246440269274
+    },
+    {
+      "flight": "9d931092-37d9-458f-8427-952536c3b875",
+      "windows": 3909,
+      "anomalies": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.186644737474427,
+      "score_min": 0.009446738077918182,
+      "score_max": 0.23006433486427336
+    },
+    {
+      "flight": "a5da117e-759f-4121-9495-0c369def087c",
+      "windows": 9136,
+      "anomalies": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.21316626087865578,
+      "score_min": 0.0923261399901899,
+      "score_max": 0.23560141824025227
+    },
+    {
+      "flight": "b0f3733f-a919-4749-919d-b16c0c3ac59e",
+      "windows": 5771,
+      "anomalies": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.17641633428251366,
+      "score_min": 0.0012323878756460571,
+      "score_max": 0.22967348165897278
+    },
+    {
+      "flight": "e17553de-a06d-4e0b-8b7d-f4280e280a44",
+      "windows": 2336,
+      "anomalies": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.19091473793000852,
+      "score_min": 0.039702729003262105,
+      "score_max": 0.23514225193188804
+    }
+  ]
+}

@@ -42,6 +42,7 @@ class CauseDiagnosisLayer:
             probable_cause=diagnosis.probable_cause,
             cause_confidence=diagnosis.cause_confidence,
             diagnostic_evidence=diagnosis.diagnostic_evidence,
+            reasons=anomaly.reasons,
             recommended_action=diagnosis.recommended_action,
             sources=anomaly.sources,
         )
@@ -124,18 +125,30 @@ _CAUSE_PROFILES = {
 
 def _diagnostic_evidence(anomaly: DetectedAnomaly) -> dict[str, EvidenceValue]:
     if anomaly.diagnostic_evidence:
-        return anomaly.diagnostic_evidence
+        evidence = dict(anomaly.diagnostic_evidence)
+        if anomaly.reasons and "reasons" not in evidence:
+            evidence["reasons"] = [
+                reason.to_dict()
+                for reason in anomaly.reasons
+            ]
+        return evidence
 
     detectors = _source_detectors(anomaly.sources)
     if not detectors:
         detectors = (anomaly.detector_name,)
 
-    return {
+    evidence: dict[str, EvidenceValue] = {
         "anomaly_type": anomaly.type.value,
         "detectors": list(detectors),
         "affected_parameters": list(anomaly.affected_parameters),
         "primary_evidence": anomaly.evidence,
     }
+    if anomaly.reasons:
+        evidence["reasons"] = [
+            reason.to_dict()
+            for reason in anomaly.reasons
+        ]
+    return evidence
 
 
 def _source_detectors(sources: tuple[AnomalySource, ...]) -> tuple[str, ...]:

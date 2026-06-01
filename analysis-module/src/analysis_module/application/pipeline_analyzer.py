@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
+from time import perf_counter
 
 from analysis_module.application.context import AnalysisContext
 from analysis_module.application.detector import (
@@ -11,7 +12,13 @@ from analysis_module.application.detector import (
     TelemetryDetector,
 )
 from analysis_module.application.result_aggregator import ResultAggregator
-from analysis_module.domain import AnomalyResult, DetectorOutput, UnifiedTelemetry
+from analysis_module.domain import (
+    AnalysisTiming,
+    AnomalyResult,
+    DetectorOutput,
+    DetectorTiming,
+    UnifiedTelemetry,
+)
 from analysis_module.features.feature_extractor import TelemetryFeatureExtractor
 from analysis_module.features.telemetry_history import TelemetryHistory
 
@@ -29,11 +36,26 @@ class DetectorPipelineAnalyzer:
     feature_window_size: int | None = None
 
     def analyze_next(self, telemetry: UnifiedTelemetry) -> AnomalyResult:
+        started_at = perf_counter()
         outputs = self._run_detectors(telemetry)
         result = self.result_aggregator.aggregate_outputs(telemetry, outputs)
         self._apply_profile_feedback(result)
         self.history.append(telemetry)
-        return result
+        return replace(
+            result,
+            timing=AnalysisTiming(
+                total_ms=_duration_ms(started_at),
+                detectors=tuple(
+                    DetectorTiming(
+                        detector=output.detector_name,
+                        duration_ms=output.duration_ms,
+                        status=output.status.value,
+                    )
+                    for output in outputs
+                    if output.duration_ms is not None
+                ),
+            ),
+        )
 
     def analyze_next_with_outputs(
         self,
@@ -53,7 +75,14 @@ class DetectorPipelineAnalyzer:
         telemetry: UnifiedTelemetry,
     ) -> tuple[DetectorOutput, ...]:
         context = self._build_context(telemetry)
-        return tuple(detector.analyze(context) for detector in self.detectors)
+        outputs: list[DetectorOutput] = []
+        for detector in self.detectors:
+            started_at = perf_counter()
+            output = detector.analyze(context)
+            outputs.append(
+                replace(output, duration_ms=_duration_ms(started_at))
+            )
+        return tuple(outputs)
 
     def _apply_profile_feedback(self, result: AnomalyResult) -> None:
         for detector in self.detectors:
@@ -76,3 +105,7 @@ class DetectorPipelineAnalyzer:
             history=self.history,
             feature_window=feature_window,
         )
+
+
+def _duration_ms(started_at: float) -> float:
+    return (perf_counter() - started_at) * 1000

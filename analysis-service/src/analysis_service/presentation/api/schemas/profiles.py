@@ -16,6 +16,8 @@ class AnalysisProfileRequest(BaseModel):
     history_size: int = Field(default=1_000, gt=0)
     model_window_size: int = Field(default=50, gt=0)
     model_artifact_path: str | None = None
+    adaptive_correlation_profile_path: str | None = None
+    isolation_forest_artifact_path: str | None = None
 
     def to_profile(self) -> AnalysisProfile:
         enabled_models = self.enabled_models
@@ -37,6 +39,8 @@ class AnalysisProfileRequest(BaseModel):
             history_size=self.history_size,
             model_window_size=self.model_window_size,
             model_artifact_path=self.model_artifact_path,
+            adaptive_correlation_profile_path=self.adaptive_correlation_profile_path,
+            isolation_forest_artifact_path=self.isolation_forest_artifact_path,
         )
 
 

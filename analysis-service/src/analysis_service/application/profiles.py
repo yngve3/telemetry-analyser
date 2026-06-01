@@ -26,6 +26,8 @@ class AnalysisProfile:
     history_size: int = 1_000
     model_window_size: int = 50
     model_artifact_path: str | Path | None = None
+    adaptive_correlation_profile_path: str | Path | None = None
+    isolation_forest_artifact_path: str | Path | None = None
 
     @property
     def enabled_model_names(self) -> tuple[str, ...]:
@@ -50,6 +52,8 @@ class AnalysisProfile:
             enabled_rules=self.enabled_rules,
             thresholds=dict(self.thresholds),
             model_artifact_path=self.model_artifact_path,
+            adaptive_correlation_profile_path=self.adaptive_correlation_profile_path,
+            isolation_forest_artifact_path=self.isolation_forest_artifact_path,
             model_window_size=self.model_window_size,
         )
 
@@ -67,6 +71,12 @@ class AnalysisProfile:
             "history_size": self.history_size,
             "model_window_size": self.model_window_size,
             "model_artifact_path": _path_to_str(self.model_artifact_path),
+            "adaptive_correlation_profile_path": _path_to_str(
+                self.adaptive_correlation_profile_path
+            ),
+            "isolation_forest_artifact_path": _path_to_str(
+                self.isolation_forest_artifact_path
+            ),
         }
 
 

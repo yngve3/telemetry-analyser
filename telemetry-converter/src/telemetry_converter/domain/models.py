@@ -46,6 +46,28 @@ class UnifiedTelemetryPayload:
     gps_age_ms: int | None = None
     system_age_ms: int | None = None
     message_quality: float | None = None
+    pos_test_ratio: float | None = None
+    vel_test_ratio: float | None = None
+    hgt_test_ratio: float | None = None
+    mag_test_ratio: float | None = None
+    hdg_test_ratio: float | None = None
+    filter_fault_flags: int | None = None
+    innovation_check_flags: int | None = None
+    gps_check_fail_flags: int | None = None
+    attitude_invalid: int | None = None
+    angular_velocity_invalid: int | None = None
+    local_position_invalid: int | None = None
+    global_position_invalid: int | None = None
+    local_velocity_invalid: int | None = None
+    battery_warning: int | None = None
+    fd_motor_failure: int | None = None
+    fd_critical_failure: int | None = None
+    fd_roll: int | None = None
+    fd_pitch: int | None = None
+    fd_alt: int | None = None
+    fd_motor: int | None = None
+    fd_battery: int | None = None
+    fd_imbalanced_prop: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
@@ -87,6 +109,28 @@ class UnifiedTelemetryPayload:
             "gps_age_ms": self.gps_age_ms,
             "system_age_ms": self.system_age_ms,
             "message_quality": self.message_quality,
+            "pos_test_ratio": self.pos_test_ratio,
+            "vel_test_ratio": self.vel_test_ratio,
+            "hgt_test_ratio": self.hgt_test_ratio,
+            "mag_test_ratio": self.mag_test_ratio,
+            "hdg_test_ratio": self.hdg_test_ratio,
+            "filter_fault_flags": self.filter_fault_flags,
+            "innovation_check_flags": self.innovation_check_flags,
+            "gps_check_fail_flags": self.gps_check_fail_flags,
+            "attitude_invalid": self.attitude_invalid,
+            "angular_velocity_invalid": self.angular_velocity_invalid,
+            "local_position_invalid": self.local_position_invalid,
+            "global_position_invalid": self.global_position_invalid,
+            "local_velocity_invalid": self.local_velocity_invalid,
+            "battery_warning": self.battery_warning,
+            "fd_motor_failure": self.fd_motor_failure,
+            "fd_critical_failure": self.fd_critical_failure,
+            "fd_roll": self.fd_roll,
+            "fd_pitch": self.fd_pitch,
+            "fd_alt": self.fd_alt,
+            "fd_motor": self.fd_motor,
+            "fd_battery": self.fd_battery,
+            "fd_imbalanced_prop": self.fd_imbalanced_prop,
         }
         payload.update(
             {

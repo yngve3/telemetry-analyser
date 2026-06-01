@@ -8,6 +8,8 @@
     "drone_id",
     "telemetry_timestamp",
     "has_anomalies",
+    "status",
+    "risk_level",
     "anomalies",
     "detector_outputs"
   ],
@@ -23,6 +25,24 @@
     "has_anomalies": {
       "type": "boolean"
     },
+    "status": {
+      "type": "string",
+      "enum": [
+        "NORMAL",
+        "INFO",
+        "WARNING",
+        "CRITICAL"
+      ]
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": [
+        "NONE",
+        "LOW",
+        "MEDIUM",
+        "HIGH"
+      ]
+    },
     "anomalies": {
       "type": "array",
       "items": {
@@ -34,6 +54,9 @@
       "additionalProperties": {
         "$ref": "#/$defs/detector_output"
       }
+    },
+    "timing": {
+      "$ref": "#/$defs/analysis_timing"
     }
   },
   "additionalProperties": false,
@@ -141,6 +164,44 @@
       },
       "additionalProperties": false
     },
+    "anomaly_reason": {
+      "type": "object",
+      "required": [
+        "group",
+        "score",
+        "confidence",
+        "features",
+        "feature_scores"
+      ],
+      "properties": {
+        "group": {
+          "type": "string",
+          "minLength": 1
+        },
+        "score": {
+          "type": "number",
+          "minimum": 0
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "features": {
+          "$ref": "#/$defs/string_list"
+        },
+        "feature_scores": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
     "aggregated_anomaly": {
       "allOf": [
         {
@@ -175,7 +236,8 @@
         "affected_fields",
         "affected_parameters",
         "evidence",
-        "diagnostic_evidence"
+        "diagnostic_evidence",
+        "reasons"
       ],
       "properties": {
         "type": {
@@ -240,6 +302,12 @@
         "diagnostic_evidence": {
           "$ref": "#/$defs/evidence"
         },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/anomaly_reason"
+          }
+        },
         "recommended_action": {
           "type": "string",
           "minLength": 1
@@ -286,6 +354,53 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/detected_anomaly"
+          }
+        },
+        "duration_ms": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "detector_timing": {
+      "type": "object",
+      "required": [
+        "detector",
+        "duration_ms",
+        "status"
+      ],
+      "properties": {
+        "detector": {
+          "type": "string",
+          "minLength": 1
+        },
+        "duration_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "analysis_timing": {
+      "type": "object",
+      "required": [
+        "total_ms",
+        "detectors"
+      ],
+      "properties": {
+        "total_ms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "detectors": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/detector_timing"
           }
         }
       },

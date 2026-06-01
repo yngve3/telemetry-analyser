@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import base64
+import json
 import socket
 import sys
+import tempfile
 import time
 import unittest
 from datetime import UTC, datetime
@@ -171,6 +173,61 @@ class AnalysisServiceApiTest(unittest.TestCase):
             ["rule_based", "correlation_based"],
         )
 
+    def test_profile_accepts_adaptive_correlation_profile_path(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            profile_path = Path(directory) / "adaptive_correlation_profile.json"
+            profile_path.write_text(
+                json.dumps(
+                    {
+                        "max_size": 10,
+                        "min_samples": 2,
+                        "errors": {
+                            "position_speed_error": [1.0, 2.0],
+                            "altitude_velocity_error": [0.1, 0.2],
+                            "heading_yaw_error": [4.0, 6.0],
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            response = self.client.put(
+                "/analysis/profile",
+                json={
+                    "model_profile": "rules_with_adaptive_correlation",
+                    "adaptive_correlation_profile_path": str(profile_path),
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["adaptive_correlation_profile_path"],
+            str(profile_path),
+        )
+
+    def test_profile_accepts_isolation_forest_artifact_path(self) -> None:
+        try:
+            import joblib  # noqa: F401
+            import sklearn  # noqa: F401
+        except ImportError:
+            self.skipTest("joblib and scikit-learn are not installed")
+
+        response = self.client.put(
+            "/analysis/profile",
+            json={
+                "model_profile": "rules_with_isolation_forest",
+                "isolation_forest_artifact_path": str(
+                    REPOSITORY_ROOT / "analysis-module" / "models" / "isolation_forest"
+                ),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["isolation_forest_artifact_path"],
+            str(REPOSITORY_ROOT / "analysis-module" / "models" / "isolation_forest"),
+        )
+
     def test_session_can_be_created_read_and_deleted(self) -> None:
         create_response = self.client.post(
             "/analysis/sessions",
@@ -209,9 +266,15 @@ class AnalysisServiceApiTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertTrue(payload["has_anomalies"])
+        self.assertEqual(payload["status"], "WARNING")
+        self.assertEqual(payload["risk_level"], "MEDIUM")
         self.assertEqual(payload["anomalies"][0]["type"], "LOW_BATTERY")
         self.assertIn("sources", payload["anomalies"][0])
+        self.assertIn("reasons", payload["anomalies"][0])
         self.assertIn("rule_based", payload["detector_outputs"])
+        self.assertIn("timing", payload)
+        self.assertIn("rule_based", payload["timing"]["detectors"])
+        self.assertIn("duration_ms", payload["detector_outputs"]["rule_based"])
 
         state_response = self.client.get("/analysis/sessions/uav-001/state")
         self.assertEqual(state_response.status_code, 200)
@@ -224,6 +287,7 @@ class AnalysisServiceApiTest(unittest.TestCase):
             state_payload["last_result"]["anomalies"][0]["type"],
             "LOW_BATTERY",
         )
+        self.assertIn("timing", state_payload["last_result"])
 
     def test_session_history_is_kept_between_http_analysis_requests(self) -> None:
         self.client.post(

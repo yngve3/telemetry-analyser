@@ -5,7 +5,15 @@ import type {
 } from "../../../shared/contracts/anomalyResult";
 import type { DetectorResponse } from "../../../shared/contracts/analysisProfile";
 import { useI18n } from "../../../shared/i18n/I18nProvider";
+import {
+  formatAnomalyType,
+  formatDetectorName,
+  formatMessage,
+  isVisibleDetectorName,
+  visibleDetectors,
+} from "../../../shared/ui/display";
 import { EmptyState } from "../../../shared/ui/EmptyState";
+import { formatDurationMs } from "../../../shared/ui/format";
 import { JsonPreview } from "../../../shared/ui/JsonPreview";
 import { StatusPill } from "../../../shared/ui/StatusPill";
 
@@ -14,7 +22,7 @@ type DetectorOutputsPanelProps = {
   result: AnomalyResult | null;
 };
 
-const defaultDetectorNames = ["rule_based", "ml", "nn_autoencoder"];
+const defaultDetectorNames = ["rule_based", "correlation_based", "autoencoder"];
 
 export function DetectorOutputsPanel({
   detectors,
@@ -23,15 +31,18 @@ export function DetectorOutputsPanel({
   const { t } = useI18n();
   const detectorNames =
     detectors.length > 0
-      ? detectors.map((detector) => detector.name)
+      ? visibleDetectors(detectors).map((detector) => detector.name)
       : defaultDetectorNames;
+  const reportedCount = Object.keys(result?.detector_outputs ?? {}).filter(
+    isVisibleDetectorName,
+  ).length;
 
   return (
     <section className="data-panel">
       <div className="panel-header">
         <h2>{t("detectors.title", "Detector outputs")}</h2>
         <StatusPill
-          label={`${Object.keys(result?.detector_outputs ?? {}).length} ${t("detectors.reported", "reported")}`}
+          label={`${reportedCount} ${t("detectors.reported", "reported")}`}
           tone="neutral"
         />
       </div>
@@ -43,18 +54,28 @@ export function DetectorOutputsPanel({
             return (
               <div className="detector-output" key={name}>
                 <div className="detector-output-header">
-                  <strong>{name}</strong>
-                  <StatusPill
-                    label={
-                      output?.status
-                        ? t(`status.${output.status}`, output.status)
-                        : t("detectors.notReported", "not reported")
-                    }
-                    tone={output?.status === "ready" ? "success" : "neutral"}
-                  />
+                  <strong>{formatDetectorName(name, t)}</strong>
+                  <div className="detector-output-meta">
+                    <StatusPill
+                      label={formatDurationMs(output?.duration_ms)}
+                      tone={
+                        typeof output?.duration_ms === "number"
+                          ? "success"
+                          : "neutral"
+                      }
+                    />
+                    <StatusPill
+                      label={
+                        output?.status
+                          ? t(`status.${output.status}`, output.status)
+                          : t("detectors.notReported", "not reported")
+                      }
+                      tone={output?.status === "ready" ? "success" : "neutral"}
+                    />
+                  </div>
                 </div>
                 {output?.message ? (
-                  <div className="message">{output.message}</div>
+                  <div className="message">{formatMessage(output.message, t)}</div>
                 ) : null}
                 {output?.anomalies?.length ? (
                   <div className="raw-anomaly-list">
@@ -91,7 +112,7 @@ function RawDetectorAnomaly({ anomaly }: { anomaly: DetectedAnomaly }) {
   return (
     <div className="raw-anomaly">
       <div className="raw-anomaly-header">
-        <strong className="code-title">{anomaly.type}</strong>
+        <strong className="code-title">{formatAnomalyType(anomaly.type, t)}</strong>
         <div className="raw-anomaly-meta">
           <StatusPill
             label={t(`severity.${anomaly.severity}`, anomaly.severity)}
@@ -103,7 +124,7 @@ function RawDetectorAnomaly({ anomaly }: { anomaly: DetectedAnomaly }) {
           />
         </div>
       </div>
-      <div className="message">{anomaly.message}</div>
+      <div className="message">{formatMessage(anomaly.message, t)}</div>
       <details className="inline-details">
         <summary>{t("detectors.evidence", "Evidence")}</summary>
         <JsonPreview value={anomaly.evidence} />

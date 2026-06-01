@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AnalysisProfilePanel } from "../features/analysis-profile/components/AnalysisProfilePanel";
 import { DetectorSelectorPanel } from "../features/analysis-profile/components/DetectorSelectorPanel";
 import { SessionPanel } from "../features/analysis-sessions/components/SessionPanel";
+import { AnalysisTimingPanel } from "../features/analysis-timing/components/AnalysisTimingPanel";
 import { AnomalyResultsPanel } from "../features/anomaly-results/components/AnomalyResultsPanel";
 import { DetectorOutputsPanel } from "../features/detector-comparison/components/DetectorOutputsPanel";
 import { ManualTelemetryPanel } from "../features/telemetry-monitoring/components/ManualTelemetryPanel";
@@ -26,7 +27,7 @@ import {
 } from "../shared/contracts/telemetry";
 import { useI18n } from "../shared/i18n/I18nProvider";
 import { EmptyState } from "../shared/ui/EmptyState";
-import { formatDate } from "../shared/ui/format";
+import { formatDate, formatDurationMs } from "../shared/ui/format";
 import { StatusPill } from "../shared/ui/StatusPill";
 
 type ResultHistoryEntry = {
@@ -213,6 +214,10 @@ export function DashboardPage() {
           profile={profileDraft}
         />
 
+        <AnalysisTimingPanel
+          detectors={detectorsQuery.data?.detectors ?? []}
+          result={currentResult}
+        />
         <TelemetryOverview result={currentResult} telemetry={currentTelemetry} />
         <AnomalyResultsPanel result={currentResult} />
         <DetectorOutputsPanel
@@ -269,6 +274,7 @@ function ResultHistoryPanel({ entries }: { entries: ResultHistoryEntry[] }) {
                 <th>{t("history.source", "Source")}</th>
                 <th>{t("history.drone", "Drone")}</th>
                 <th>{t("history.telemetryTimestamp", "Telemetry timestamp")}</th>
+                <th>{t("history.analysisTime", "Analysis time")}</th>
                 <th>{t("history.anomalies", "Anomalies")}</th>
               </tr>
             </thead>
@@ -279,6 +285,7 @@ function ResultHistoryPanel({ entries }: { entries: ResultHistoryEntry[] }) {
                   <td>{t(`source.${entry.source}`, entry.source)}</td>
                   <td className="code-cell">{entry.result.drone_id}</td>
                   <td className="code-cell">{entry.result.telemetry_timestamp}</td>
+                  <td>{formatDurationMs(entry.result.timing?.total_ms)}</td>
                   <td>
                     <StatusPill
                       label={String(entry.result.anomalies.length)}

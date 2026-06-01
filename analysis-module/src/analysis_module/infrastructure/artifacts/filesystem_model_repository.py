@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 from zipfile import ZipFile
 
+from analysis_module.application.reason_diagnostics import (
+    feature_statistics_from_metadata,
+)
 from analysis_module.detectors.model_based.interfaces import TelemetryScoringModel
 from analysis_module.detectors.model_based.model_artifact import (
     ModelArtifact,
@@ -18,7 +21,7 @@ from analysis_module.detectors.model_based.model_artifact import (
 from analysis_module.detectors.model_based.neural_models import (
     AutoencoderArtifactScoringModel,
 )
-from analysis_module.features.feature_extractor import TelemetryFeatureExtractor
+from analysis_module.features.model_features import SEQUENCE_FEATURE_NAMES
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,13 +29,15 @@ class FilesystemModelArtifactRepository:
     """Validates model artifact packages from a directory or zip file."""
 
     expected_feature_names: Sequence[str] = field(
-        default_factory=lambda: TelemetryFeatureExtractor().feature_names
+        default_factory=lambda: SEQUENCE_FEATURE_NAMES
     )
 
     def load(self, path: str | Path) -> TelemetryScoringModel:
         artifact_path = Path(path)
         if artifact_path.is_dir():
-            artifact = self._load_directory(artifact_path)
+            if (artifact_path / "scaler.joblib").is_file():
+                return self._load_torch_directory(artifact_path)
+            artifact = self._load_legacy_directory(artifact_path)
         elif artifact_path.is_file() and artifact_path.suffix.lower() == ".zip":
             artifact = self._load_zip(artifact_path)
         else:
@@ -45,7 +50,53 @@ class FilesystemModelArtifactRepository:
             metadata=artifact.metadata.to_dict(),
         )
 
-    def _load_directory(self, artifact_path: Path) -> ModelArtifact:
+    def _load_torch_directory(self, artifact_path: Path) -> AutoencoderArtifactScoringModel:
+        for file_name in ("model.pt", "metadata.json", "scaler.joblib"):
+            if not (artifact_path / file_name).is_file():
+                raise ModelArtifactError(
+                    f"Model artifact is missing required file `{file_name}`."
+                )
+
+        metadata = _read_json_file(artifact_path / "metadata.json")
+        if metadata.get("model_type") not in ("mlp_autoencoder", "autoencoder"):
+            raise ModelArtifactError(
+                "Autoencoder artifact metadata has an invalid model_type."
+            )
+
+        feature_names = _required_str_tuple(metadata, "feature_names")
+        window_size = _required_positive_int(metadata, "window_size")
+        threshold = _required_number(metadata, "threshold")
+        input_dim = int(
+            metadata.get("input_dim", window_size * len(feature_names))
+        )
+        expected_input_dim = window_size * len(feature_names)
+        if input_dim != expected_input_dim:
+            raise ModelArtifactError(
+                "Autoencoder artifact input_dim does not match window_size "
+                "and feature_names."
+            )
+        latent_dim = _required_positive_int(metadata, "latent_dim")
+        model, scaler = _load_autoencoder_runtime(
+            artifact_path=artifact_path,
+            input_dim=input_dim,
+            latent_dim=latent_dim,
+        )
+
+        return AutoencoderArtifactScoringModel(
+            threshold=threshold,
+            metadata=metadata,
+            model=model,
+            scaler=scaler,
+            feature_names=feature_names,
+            window_size=window_size,
+            feature_statistics=feature_statistics_from_metadata(
+                feature_names,
+                metadata,
+                scaler,
+            ),
+        )
+
+    def _load_legacy_directory(self, artifact_path: Path) -> ModelArtifact:
         required_files = (
             "model.pt",
             "metadata.json",
@@ -96,6 +147,102 @@ def _read_json_file(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ModelArtifactError(f"Artifact file `{path.name}` must contain an object.")
     return payload
+
+
+def _load_autoencoder_runtime(
+    artifact_path: Path,
+    input_dim: int,
+    latent_dim: int,
+) -> tuple[Any, Any]:
+    try:
+        import joblib
+    except ImportError as exc:
+        raise ModelArtifactError(
+            "Autoencoder artifact loading requires joblib."
+        ) from exc
+
+    try:
+        import torch
+        from torch import nn
+    except ImportError as exc:
+        raise ModelArtifactError(
+            "Autoencoder artifact loading requires PyTorch."
+        ) from exc
+
+    class AutoencoderNetwork(nn.Module):
+        def __init__(self, input_dim: int, latent_dim: int) -> None:
+            super().__init__()
+            self.encoder = nn.Sequential(
+                nn.Linear(input_dim, 256),
+                nn.ReLU(),
+                nn.Linear(256, 128),
+                nn.ReLU(),
+                nn.Linear(128, latent_dim),
+            )
+            self.decoder = nn.Sequential(
+                nn.Linear(latent_dim, 128),
+                nn.ReLU(),
+                nn.Linear(128, 256),
+                nn.ReLU(),
+                nn.Linear(256, input_dim),
+            )
+
+        def forward(self, value):
+            encoded = self.encoder(value)
+            return self.decoder(encoded)
+
+    try:
+        scaler = joblib.load(artifact_path / "scaler.joblib")
+        model = AutoencoderNetwork(input_dim=input_dim, latent_dim=latent_dim)
+        try:
+            state_dict = torch.load(
+                artifact_path / "model.pt",
+                map_location="cpu",
+                weights_only=True,
+            )
+        except TypeError:
+            state_dict = torch.load(artifact_path / "model.pt", map_location="cpu")
+        model.load_state_dict(state_dict)
+        model.eval()
+    except ModuleNotFoundError as exc:
+        raise ModelArtifactError(
+            "Autoencoder artifact loading requires PyTorch and joblib."
+        ) from exc
+    except Exception as exc:
+        raise ModelArtifactError(
+            "Autoencoder artifact files could not be loaded."
+        ) from exc
+
+    return model, scaler
+
+
+def _required_str_tuple(payload: Mapping[str, Any], key: str) -> tuple[str, ...]:
+    value = payload.get(key)
+    if (
+        not isinstance(value, list)
+        or not value
+        or any(not isinstance(item, str) or not item for item in value)
+    ):
+        raise ModelArtifactError(
+            f"Artifact metadata field `{key}` must be a non-empty string array."
+        )
+    return tuple(value)
+
+
+def _required_positive_int(payload: Mapping[str, Any], key: str) -> int:
+    value = payload.get(key)
+    if not isinstance(value, int) or value <= 0:
+        raise ModelArtifactError(
+            f"Artifact metadata field `{key}` must be a positive integer."
+        )
+    return value
+
+
+def _required_number(payload: Mapping[str, Any], key: str) -> float:
+    value = payload.get(key)
+    if not isinstance(value, int | float):
+        raise ModelArtifactError(f"Artifact field `{key}` must be numeric.")
+    return float(value)
 
 
 def _read_zip_json(archive: ZipFile, file_name: str) -> dict[str, Any]:

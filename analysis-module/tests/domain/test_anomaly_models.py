@@ -5,6 +5,7 @@ import unittest
 from support import telemetry
 
 from analysis_module import (  # noqa: E402
+    AnomalyReason,
     AnomalySource,
     AnomalyResult,
     AnomalyType,
@@ -27,6 +28,15 @@ class AnomalyModelsTest(unittest.TestCase):
             detector_name="GpsSpoofingRule",
             affected_fields=("latitude_deg", "longitude_deg"),
             evidence={"distance_delta_m": 130.4},
+            reasons=(
+                AnomalyReason(
+                    group="GPS",
+                    score=8.0,
+                    confidence=0.72,
+                    features=("eph_mean",),
+                    feature_scores={"eph_mean": 8.0},
+                ),
+            ),
             probable_cause="Reported speed does not explain the position jump.",
         )
 
@@ -44,6 +54,8 @@ class AnomalyModelsTest(unittest.TestCase):
             anomaly.probable_cause,
             "Reported speed does not explain the position jump.",
         )
+        self.assertEqual(anomaly.reasons[0].group, "GPS")
+        self.assertEqual(anomaly.to_dict()["reasons"][0]["group"], "GPS")
 
     def test_result_reports_anomaly_presence_and_detector_outputs(self) -> None:
         sample = telemetry()
@@ -75,6 +87,8 @@ class AnomalyModelsTest(unittest.TestCase):
         )
 
         self.assertTrue(result.has_anomalies)
+        self.assertEqual(result.status, "WARNING")
+        self.assertEqual(result.risk_level, "MEDIUM")
         self.assertEqual(result.detector_outputs[0].detector_name, "rule_based")
         self.assertEqual(result.anomalies[0].sources[0].detector, "rule_based")
 
@@ -120,6 +134,8 @@ class AnomalyModelsTest(unittest.TestCase):
         payload = result.to_dict()
 
         self.assertEqual(payload["has_anomalies"], True)
+        self.assertEqual(payload["status"], "WARNING")
+        self.assertEqual(payload["risk_level"], "MEDIUM")
         self.assertIn("rule_based", payload["detector_outputs"])
         self.assertEqual(payload["anomalies"][0]["source"], "rule_based")
         self.assertEqual(payload["anomalies"][0]["detector_kind"], "rule_based")

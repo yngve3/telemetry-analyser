@@ -1,0 +1,53 @@
+{
+  "model_type": "isolation_forest",
+  "feature_names": [
+    "position_speed_error_mean",
+    "position_speed_error_max",
+    "altitude_velocity_error_mean",
+    "altitude_velocity_error_max",
+    "heading_yaw_error_mean",
+    "heading_yaw_error_max",
+    "ground_speed_mean",
+    "ground_speed_std",
+    "vertical_speed_mean",
+    "vertical_speed_std",
+    "altitude_delta",
+    "roll_mean",
+    "roll_std",
+    "pitch_mean",
+    "pitch_std",
+    "yaw_mean",
+    "yaw_std",
+    "yaw_delta",
+    "battery_voltage_mean",
+    "battery_remaining_mean",
+    "gps_fix_status_mean",
+    "satellites_visible_mean",
+    "eph_mean",
+    "epv_mean"
+  ],
+  "window_size": 20,
+  "step_size": 3,
+  "contamination": 0.01,
+  "threshold": 7.89265300251557e-18,
+  "score_percentiles": {
+    "p01": 7.89265300251557e-18,
+    "p05": 0.03894973504698768,
+    "p50": 0.15738547137915018,
+    "p95": 0.19106334637913938
+  },
+  "used_flights": [
+    "carbonZ_2018-07-18-16-37-39_1_no_failure",
+    "carbonZ_2018-07-30-16-39-00_3_no_failure",
+    "carbonZ_2018-09-11-14-16-55_no_failure",
+    "carbonZ_2018-09-11-14-41-38_no_failure",
+    "carbonZ_2018-09-11-15-05-11_2_no_failure",
+    "carbonZ_2018-10-05-14-34-20_1_no_failure",
+    "carbonZ_2018-10-05-14-37-22_1_no_failure",
+    "carbonZ_2018-10-05-15-52-12_1_no_failure",
+    "carbonZ_2018-10-05-15-52-12_2_no_failure",
+    "carbonZ_2018-10-18-11-08-24_no_failure"
+  ],
+  "skipped_flights": [],
+  "samples": 704
+}

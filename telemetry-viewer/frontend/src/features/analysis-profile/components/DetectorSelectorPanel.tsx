@@ -3,6 +3,11 @@ import type {
   DetectorResponse,
 } from "../../../shared/contracts/analysisProfile";
 import { useI18n } from "../../../shared/i18n/I18nProvider";
+import {
+  formatDetectorName,
+  isVisibleDetectorName,
+  visibleDetectors,
+} from "../../../shared/ui/display";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { StatusPill } from "../../../shared/ui/StatusPill";
 
@@ -18,11 +23,16 @@ type DetectorSelectorPanelProps = {
 
 const fallbackDetectors: DetectorResponse[] = [
   { name: "rule_based", kind: "rule_based", status: "available", aliases: [] },
-  { name: "ml", kind: "ml", status: "requires_artifact", aliases: [] },
   {
-    name: "nn_autoencoder",
-    kind: "nn",
-    status: "requires_artifact",
+    name: "correlation_based",
+    kind: "model_based",
+    status: "available",
+    aliases: ["correlation"],
+  },
+  {
+    name: "autoencoder",
+    kind: "model_based",
+    status: "available",
     aliases: ["nn", "neural_network"],
   },
 ];
@@ -57,8 +67,12 @@ export function DetectorSelectorPanel({
   }
 
   const currentProfile = profile;
-  const availableDetectors = detectors.length > 0 ? detectors : fallbackDetectors;
-  const enabled = new Set(currentProfile.enabled_detectors);
+  const availableDetectors = visibleDetectors(
+    detectors.length > 0 ? detectors : fallbackDetectors,
+  );
+  const visibleEnabledDetectors =
+    currentProfile.enabled_detectors.filter(isVisibleDetectorName);
+  const enabled = new Set(visibleEnabledDetectors);
 
   function toggleDetector(name: string) {
     const nextEnabled = new Set(enabled);
@@ -75,8 +89,8 @@ export function DetectorSelectorPanel({
       <div className="panel-header">
         <h2>{t("detectorSelector.title", "Analyzers")}</h2>
         <StatusPill
-          label={`${currentProfile.enabled_detectors.length} ${t("detectorSelector.selected", "selected")}`}
-          tone={currentProfile.enabled_detectors.length > 0 ? "success" : "danger"}
+          label={`${visibleEnabledDetectors.length} ${t("detectorSelector.selected", "selected")}`}
+          tone={visibleEnabledDetectors.length > 0 ? "success" : "danger"}
         />
       </div>
 
@@ -93,7 +107,7 @@ export function DetectorSelectorPanel({
                 onClick={() => toggleDetector(detector.name)}
                 type="button"
               >
-                <strong>{detector.name}</strong>
+                <strong>{formatDetectorName(detector.name, t)}</strong>
                 <span>{t(`status.${detector.status}`, detector.status)}</span>
               </button>
             );
@@ -103,7 +117,7 @@ export function DetectorSelectorPanel({
         <div className="button-row">
           <button
             className="primary-button"
-            disabled={isSaving || currentProfile.enabled_detectors.length === 0}
+            disabled={isSaving || visibleEnabledDetectors.length === 0}
             onClick={onSave}
             type="button"
           >

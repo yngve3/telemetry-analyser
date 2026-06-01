@@ -11,7 +11,10 @@ from analysis_module.detectors.model_based import ModelArtifactError  # noqa: E4
 from analysis_module.detectors.model_based.model_artifact import (  # noqa: E402
     ModelArtifactMetadata,
 )
-from analysis_module.features import TelemetryFeatureExtractor  # noqa: E402
+from analysis_module.features import (  # noqa: E402
+    SEQUENCE_FEATURE_NAMES,
+    TelemetryFeatureExtractor,
+)
 from analysis_module.infrastructure.artifacts import (  # noqa: E402
     FilesystemModelArtifactRepository,
 )
@@ -19,7 +22,7 @@ from analysis_module.infrastructure.artifacts import (  # noqa: E402
 
 class ModelArtifactTest(unittest.TestCase):
     def test_metadata_validation_accepts_expected_feature_order(self) -> None:
-        feature_names = TelemetryFeatureExtractor().feature_names
+        feature_names = SEQUENCE_FEATURE_NAMES
 
         metadata = ModelArtifactMetadata.from_dict(
             {
@@ -45,11 +48,11 @@ class ModelArtifactTest(unittest.TestCase):
                     "feature_names": ["gps_eph", "battery_percent"],
                     "created_at": "2026-05-24T00:00:00Z",
                 },
-                expected_feature_names=TelemetryFeatureExtractor().feature_names,
+                expected_feature_names=SEQUENCE_FEATURE_NAMES,
             )
 
     def test_filesystem_repository_validates_artifact_directory(self) -> None:
-        feature_names = TelemetryFeatureExtractor().feature_names
+        feature_names = SEQUENCE_FEATURE_NAMES
         with tempfile.TemporaryDirectory() as directory:
             artifact_path = Path(directory)
             (artifact_path / "model.pt").write_bytes(b"")

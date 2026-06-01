@@ -54,6 +54,15 @@ Profiles use service-facing model names:
 profile is updated by `analysis-module` only after final aggregation confirms
 that the current sample has no anomalies.
 
+An initial adaptive correlation profile can be provided through
+`adaptive_correlation_profile_path` in the analysis profile request. If omitted,
+`analysis-module` checks its default model directory for
+`adaptive_correlation_profile.json`.
+
+A trained Isolation Forest artifact can be provided through
+`isolation_forest_artifact_path`. If omitted, `analysis-module` checks
+`analysis-module/models/isolation_forest`.
+
 Only models with status `available` can be enabled for runtime analysis. Models
 with `planned` are exposed for API visibility, but requests that enable them are
 rejected until `analysis-module` provides connected detectors for those models.

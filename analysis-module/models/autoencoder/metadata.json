@@ -1,0 +1,51 @@
+{
+  "model_type": "mlp_autoencoder",
+  "feature_names": [
+    "altitude",
+    "vx",
+    "vy",
+    "vz",
+    "ground_speed",
+    "roll",
+    "pitch",
+    "yaw",
+    "battery_voltage",
+    "battery_remaining",
+    "gps_fix_status",
+    "satellites_visible",
+    "eph",
+    "epv",
+    "position_speed_error",
+    "altitude_velocity_error",
+    "heading_yaw_error"
+  ],
+  "window_size": 20,
+  "step_size": 3,
+  "input_dim": 340,
+  "latent_dim": 32,
+  "epochs": 50,
+  "batch_size": 32,
+  "learning_rate": 0.001,
+  "threshold_percentile": 99.0,
+  "threshold": 0.47366979122161823,
+  "train_samples": 563,
+  "validation_samples": 141,
+  "reconstruction_error_percentiles": {
+    "p50": 0.1303887963294983,
+    "p95": 0.33922097086906433,
+    "p99": 0.47366979122161823
+  },
+  "used_flights": [
+    "carbonZ_2018-07-18-16-37-39_1_no_failure",
+    "carbonZ_2018-07-30-16-39-00_3_no_failure",
+    "carbonZ_2018-09-11-14-16-55_no_failure",
+    "carbonZ_2018-09-11-14-41-38_no_failure",
+    "carbonZ_2018-09-11-15-05-11_2_no_failure",
+    "carbonZ_2018-10-05-14-34-20_1_no_failure",
+    "carbonZ_2018-10-05-14-37-22_1_no_failure",
+    "carbonZ_2018-10-05-15-52-12_1_no_failure",
+    "carbonZ_2018-10-05-15-52-12_2_no_failure",
+    "carbonZ_2018-10-18-11-08-24_no_failure"
+  ],
+  "skipped_flights": []
+}

@@ -6,8 +6,8 @@ services:
     image: analysis-service:local
     container_name: analysis-service
     ports:
-      - "8010:8010"
-      - "14560:14560/udp"
+      - "0.0.0.0:8010:8010"
+      - "0.0.0.0:14560:14560/udp"
     healthcheck:
       test:
         [

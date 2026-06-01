@@ -46,8 +46,8 @@ Implemented model-based detectors:
   telemetry channels;
 - `adaptive_correlation_based` - analyzes the same consistency relationships
   with a session-local profile of normal errors;
-- `isolation_forest` - fits an Isolation Forest baseline to a recent feature
-  window;
+- `isolation_forest` - loads a trained sklearn Isolation Forest artifact when
+  available, otherwise uses the built-in recent-window baseline;
 - `autoencoder` - reports reconstruction-error anomalies as a pluggable
   model-based detector.
 
@@ -56,6 +56,11 @@ reconstruction baseline. If `model_artifact_path` points to a valid artifact, or
 an artifact is present under `analysis-module/models/autoencoder(.zip)`, the
 detector uses the artifact-backed scoring interface. The artifact layout is
 documented in `analysis-module/models/README.md`.
+
+The Isolation Forest detector can load `analysis-module/models/isolation_forest`
+or an explicit `AnalyzerConfig.isolation_forest_artifact_path`. Its artifact was
+produced by the training scripts and contains `model.joblib`, `scaler.joblib`,
+and `metadata.json`.
 
 Graph-based models are a future extension point. They are documented here to keep
 the architecture open for parameter-relationship analysis without adding a heavy
@@ -87,6 +92,11 @@ required for startup.
 Profile persistence is represented as plain data through `to_dict()` and
 `from_dict()`. Reading or writing a profile file belongs to an infrastructure
 adapter outside the detector.
+
+The application factory can initialize the adaptive profile from a JSON file.
+An explicit `AnalyzerConfig.adaptive_correlation_profile_path` takes priority.
+Without it, the factory checks `analysis-module/models/adaptive_correlation_profile.json`
+and `analysis-module/models/adaptive_correlation_profile`.
 
 ## Boundary
 

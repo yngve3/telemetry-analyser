@@ -12,3 +12,5 @@ build/
 node_modules/
 playwright-report/
 test-results/
+training/datasets/
+.DS_Store

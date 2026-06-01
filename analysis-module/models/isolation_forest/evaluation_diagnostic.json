@@ -1,0 +1,483 @@
+{
+  "threshold": 7.89265300251557e-18,
+  "results": [
+    {
+      "flight": "carbonZ_2018-09-11-14-22-07_2_engine_failure",
+      "label": "failure",
+      "windows": 79,
+      "anomaly_windows": 8,
+      "anomaly_ratio": 0.10126582278481013,
+      "score_mean": 0.08408557620984951,
+      "score_min": -0.040136766789733436,
+      "score_max": 0.15863078762705585
+    },
+    {
+      "flight": "carbonZ_2018-10-18-11-03-57_engine_failure_with_emr_traj",
+      "label": "failure",
+      "windows": 154,
+      "anomaly_windows": 14,
+      "anomaly_ratio": 0.09090909090909091,
+      "score_mean": 0.10733952918100369,
+      "score_min": -0.04211375648958282,
+      "score_max": 0.1761877974102472
+    },
+    {
+      "flight": "carbonZ_2018-07-30-16-39-00_2_engine_failure",
+      "label": "failure",
+      "windows": 140,
+      "anomaly_windows": 11,
+      "anomaly_ratio": 0.07857142857142857,
+      "score_mean": 0.11584031676045874,
+      "score_min": -0.02015469326581454,
+      "score_max": 0.18832803631240574
+    },
+    {
+      "flight": "carbonZ_2018-07-18-16-22-01_engine_failure_with_emr_traj",
+      "label": "failure",
+      "windows": 176,
+      "anomaly_windows": 12,
+      "anomaly_ratio": 0.06818181818181818,
+      "score_mean": 0.09906458434777887,
+      "score_min": -0.0413457815445073,
+      "score_max": 0.16269374431515998
+    },
+    {
+      "flight": "carbonZ_2018-09-11-15-06-34_2_rudder_right_failure",
+      "label": "failure",
+      "windows": 89,
+      "anomaly_windows": 6,
+      "anomaly_ratio": 0.06741573033707865,
+      "score_mean": 0.10459212051765891,
+      "score_min": -0.022480831994761807,
+      "score_max": 0.1719358870404697
+    },
+    {
+      "flight": "carbonZ_2018-07-18-12-10-11_no_ground_truth",
+      "label": "normal",
+      "windows": 273,
+      "anomaly_windows": 17,
+      "anomaly_ratio": 0.06227106227106227,
+      "score_mean": 0.10697940998543709,
+      "score_min": -0.030434688122471854,
+      "score_max": 0.19877145997705498
+    },
+    {
+      "flight": "carbonZ_2018-10-05-15-52-12_3_engine_failure_with_emr_traj",
+      "label": "failure",
+      "windows": 85,
+      "anomaly_windows": 5,
+      "anomaly_ratio": 0.058823529411764705,
+      "score_mean": 0.10824635929721667,
+      "score_min": -0.032576126634547564,
+      "score_max": 0.19509199837711533
+    },
+    {
+      "flight": "carbonZ_2018-09-11-15-06-34_1_rudder_right_failure",
+      "label": "failure",
+      "windows": 91,
+      "anomaly_windows": 5,
+      "anomaly_ratio": 0.054945054945054944,
+      "score_mean": 0.11068425773875082,
+      "score_min": -0.016283454872292324,
+      "score_max": 0.18205519401464682
+    },
+    {
+      "flight": "carbonZ_2018-09-11-14-41-51_elevator_failure",
+      "label": "failure",
+      "windows": 172,
+      "anomaly_windows": 9,
+      "anomaly_ratio": 0.05232558139534884,
+      "score_mean": 0.13314067341630947,
+      "score_min": -0.06689492869318359,
+      "score_max": 0.19965047708139527
+    },
+    {
+      "flight": "carbonZ_2018-09-11-17-27-13_2_both_ailerons_failure",
+      "label": "failure",
+      "windows": 134,
+      "anomaly_windows": 7,
+      "anomaly_ratio": 0.05223880597014925,
+      "score_mean": 0.13289272548395442,
+      "score_min": -0.03529698447244789,
+      "score_max": 0.19841696592990105
+    },
+    {
+      "flight": "carbonZ_2018-10-05-15-52-12_2_no_failure",
+      "label": "normal",
+      "windows": 60,
+      "anomaly_windows": 3,
+      "anomaly_ratio": 0.05,
+      "score_mean": 0.14237490539060746,
+      "score_min": -0.009294895088962307,
+      "score_max": 0.19671005498134642
+    },
+    {
+      "flight": "carbonZ_2018-10-05-14-34-20_2_right_aileron_failure_with_emr_traj",
+      "label": "failure",
+      "windows": 217,
+      "anomaly_windows": 9,
+      "anomaly_ratio": 0.041474654377880185,
+      "score_mean": 0.11377615037838823,
+      "score_min": -0.02868608159861874,
+      "score_max": 0.19796450738902055
+    },
+    {
+      "flight": "carbonZ_2018-07-30-16-39-00_3_no_failure",
+      "label": "normal",
+      "windows": 102,
+      "anomaly_windows": 4,
+      "anomaly_ratio": 0.0392156862745098,
+      "score_mean": 0.13113329698206214,
+      "score_min": -0.07750543254560849,
+      "score_max": 0.1967142195176761
+    },
+    {
+      "flight": "carbonZ_2018-07-18-16-37-39_2_engine_failure_with_emr_traj",
+      "label": "failure",
+      "windows": 173,
+      "anomaly_windows": 6,
+      "anomaly_ratio": 0.03468208092485549,
+      "score_mean": 0.12871327003646965,
+      "score_min": -0.04049794884261204,
+      "score_max": 0.19899958753655483
+    },
+    {
+      "flight": "carbonZ_2018-09-11-14-22-07_1_engine_failure",
+      "label": "failure",
+      "windows": 150,
+      "anomaly_windows": 5,
+      "anomaly_ratio": 0.03333333333333333,
+      "score_mean": 0.10299177157567821,
+      "score_min": -0.02581832604140888,
+      "score_max": 0.16113958325269379
+    },
+    {
+      "flight": "carbonZ_2018-09-11-11-56-30_engine_failure",
+      "label": "failure",
+      "windows": 165,
+      "anomaly_windows": 5,
+      "anomaly_ratio": 0.030303030303030304,
+      "score_mean": 0.13259017499914033,
+      "score_min": -0.03609111997060521,
+      "score_max": 0.20184804736314504
+    },
+    {
+      "flight": "carbonZ_2018-10-05-15-55-10_engine_failure_with_emr_traj",
+      "label": "failure",
+      "windows": 151,
+      "anomaly_windows": 4,
+      "anomaly_ratio": 0.026490066225165563,
+      "score_mean": 0.13556640049805288,
+      "score_min": -0.036946001257189054,
+      "score_max": 0.19452814950690384
+    },
+    {
+      "flight": "carbonZ_2018-10-05-14-37-22_2_right_aileron_failure",
+      "label": "failure",
+      "windows": 192,
+      "anomaly_windows": 4,
+      "anomaly_ratio": 0.020833333333333332,
+      "score_mean": 0.14675213714805166,
+      "score_min": -0.03849091150802342,
+      "score_max": 0.1992979648739328
+    },
+    {
+      "flight": "carbonZ_2018-10-18-11-04-35_engine_failure_with_emr_traj",
+      "label": "failure",
+      "windows": 144,
+      "anomaly_windows": 3,
+      "anomaly_ratio": 0.020833333333333332,
+      "score_mean": 0.14772158458857498,
+      "score_min": -0.025602377312977542,
+      "score_max": 0.20457340763874737
+    },
+    {
+      "flight": "carbonZ_2018-09-11-17-55-30_2_left_aileron_failure",
+      "label": "failure",
+      "windows": 106,
+      "anomaly_windows": 2,
+      "anomaly_ratio": 0.018867924528301886,
+      "score_mean": 0.13865096577388966,
+      "score_min": -0.020213596274760826,
+      "score_max": 0.1897690485790705
+    },
+    {
+      "flight": "carbonZ_2018-07-18-15-53-31_1_engine_failure",
+      "label": "failure",
+      "windows": 175,
+      "anomaly_windows": 3,
+      "anomaly_ratio": 0.017142857142857144,
+      "score_mean": 0.14802100584388034,
+      "score_min": -0.02981271911334593,
+      "score_max": 0.2070848818510468
+    },
+    {
+      "flight": "carbonZ_2018-10-18-11-04-08_1_engine_failure_with_emr_traj",
+      "label": "failure",
+      "windows": 152,
+      "anomaly_windows": 2,
+      "anomaly_ratio": 0.013157894736842105,
+      "score_mean": 0.09994164382784047,
+      "score_min": -0.02305725998802932,
+      "score_max": 0.18383566721779082
+    },
+    {
+      "flight": "carbonZ_2018-10-18-11-06-06_engine_failure_with_emr_traj",
+      "label": "failure",
+      "windows": 156,
+      "anomaly_windows": 2,
+      "anomaly_ratio": 0.01282051282051282,
+      "score_mean": 0.12306536504726946,
+      "score_min": -0.0029086530043753722,
+      "score_max": 0.19720655995841896
+    },
+    {
+      "flight": "carbonZ_2018-09-11-14-52-54_left_aileron__right_aileron__failure",
+      "label": "failure",
+      "windows": 313,
+      "anomaly_windows": 4,
+      "anomaly_ratio": 0.012779552715654952,
+      "score_mean": 0.13451254205258603,
+      "score_min": -0.03593818122791137,
+      "score_max": 0.19063437557864793
+    },
+    {
+      "flight": "carbonZ_2018-10-18-11-04-00_engine_failure_with_emr_traj",
+      "label": "failure",
+      "windows": 164,
+      "anomaly_windows": 2,
+      "anomaly_ratio": 0.012195121951219513,
+      "score_mean": 0.12438858311321889,
+      "score_min": -0.004493101671688593,
+      "score_max": 0.1939565971036083
+    },
+    {
+      "flight": "carbonZ_2018-07-30-16-39-00_1_engine_failure",
+      "label": "failure",
+      "windows": 174,
+      "anomaly_windows": 2,
+      "anomaly_ratio": 0.011494252873563218,
+      "score_mean": 0.11088117083339909,
+      "score_min": -0.016351652125626726,
+      "score_max": 0.17045667342424387
+    },
+    {
+      "flight": "carbonZ_2018-09-11-15-05-11_1_elevator_failure",
+      "label": "failure",
+      "windows": 98,
+      "anomaly_windows": 1,
+      "anomaly_ratio": 0.01020408163265306,
+      "score_mean": 0.14621802737870382,
+      "score_min": -0.014601623814022746,
+      "score_max": 0.20431543776750266
+    },
+    {
+      "flight": "carbonZ_2018-10-05-15-52-12_1_no_failure",
+      "label": "normal",
+      "windows": 116,
+      "anomaly_windows": 1,
+      "anomaly_ratio": 0.008620689655172414,
+      "score_mean": 0.13552147144314067,
+      "score_min": -0.007420232870008481,
+      "score_max": 0.20601182069466084
+    },
+    {
+      "flight": "carbonZ_2018-09-11-17-55-30_1_right_aileron_failure",
+      "label": "failure",
+      "windows": 178,
+      "anomaly_windows": 1,
+      "anomaly_ratio": 0.0056179775280898875,
+      "score_mean": 0.13443855264802718,
+      "score_min": -0.009255015641530195,
+      "score_max": 0.20047562390446394
+    },
+    {
+      "flight": "carbonZ_2018-07-18-15-53-31_2_engine_failure",
+      "label": "failure",
+      "windows": 116,
+      "anomaly_windows": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.15566727186439103,
+      "score_min": 0.06395615713140024,
+      "score_max": 0.20033008835088467
+    },
+    {
+      "flight": "carbonZ_2018-07-18-16-37-39_1_no_failure",
+      "label": "normal",
+      "windows": 36,
+      "anomaly_windows": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.14100402136311568,
+      "score_min": 0.09246985072578395,
+      "score_max": 0.18248923597432037
+    },
+    {
+      "flight": "carbonZ_2018-07-30-16-29-45_engine_failure_with_emr_traj",
+      "label": "failure",
+      "windows": 190,
+      "anomaly_windows": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.14562708374883332,
+      "score_min": 0.02758781353377404,
+      "score_max": 0.1959541288774258
+    },
+    {
+      "flight": "carbonZ_2018-07-30-17-10-45_engine_failure_with_emr_traj",
+      "label": "failure",
+      "windows": 175,
+      "anomaly_windows": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.14283476916913185,
+      "score_min": 0.013373331025416713,
+      "score_max": 0.19857464120949092
+    },
+    {
+      "flight": "carbonZ_2018-07-30-17-20-01_engine_failure_with_emr_traj",
+      "label": "failure",
+      "windows": 138,
+      "anomaly_windows": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.11867072072454476,
+      "score_min": 0.0016527718056024154,
+      "score_max": 0.18233648715095996
+    },
+    {
+      "flight": "carbonZ_2018-07-30-17-36-35_engine_failure_with_emr_traj",
+      "label": "failure",
+      "windows": 208,
+      "anomaly_windows": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.11870646802580337,
+      "score_min": 0.0008467310880728718,
+      "score_max": 0.17366753880768881
+    },
+    {
+      "flight": "carbonZ_2018-07-30-17-46-31_engine_failure_with_emr_traj",
+      "label": "failure",
+      "windows": 147,
+      "anomaly_windows": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.14272640665753691,
+      "score_min": 0.04574804283406819,
+      "score_max": 0.2076939350490915
+    },
+    {
+      "flight": "carbonZ_2018-09-11-14-16-55_no_failure",
+      "label": "normal",
+      "windows": 40,
+      "anomaly_windows": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.0687250371574537,
+      "score_min": 0.017921604716544248,
+      "score_max": 0.12342116692419153
+    },
+    {
+      "flight": "carbonZ_2018-09-11-14-41-38_no_failure",
+      "label": "normal",
+      "windows": 54,
+      "anomaly_windows": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.17187148310172856,
+      "score_min": 0.11343392674376485,
+      "score_max": 0.20530832069278682
+    },
+    {
+      "flight": "carbonZ_2018-09-11-15-05-11_2_no_failure",
+      "label": "normal",
+      "windows": 86,
+      "anomaly_windows": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.17074196187628243,
+      "score_min": 0.1173259407441693,
+      "score_max": 0.20100319240531644
+    },
+    {
+      "flight": "carbonZ_2018-09-11-15-06-34_3_rudder_left_failure",
+      "label": "failure",
+      "windows": 90,
+      "anomaly_windows": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.14008386050929444,
+      "score_min": 0.01151277888696689,
+      "score_max": 0.17905807101919546
+    },
+    {
+      "flight": "carbonZ_2018-09-11-17-27-13_1_rudder_zero__left_aileron_failure",
+      "label": "failure",
+      "windows": 192,
+      "anomaly_windows": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.14183913764079795,
+      "score_min": 0.03851625140519399,
+      "score_max": 0.19080301998759785
+    },
+    {
+      "flight": "carbonZ_2018-10-05-14-34-20_1_no_failure",
+      "label": "normal",
+      "windows": 86,
+      "anomaly_windows": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.16965588553976713,
+      "score_min": 0.11077169392340025,
+      "score_max": 0.1976823330312244
+    },
+    {
+      "flight": "carbonZ_2018-10-05-14-37-22_1_no_failure",
+      "label": "normal",
+      "windows": 93,
+      "anomaly_windows": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.13206549488710612,
+      "score_min": 0.0315630061482669,
+      "score_max": 0.19651489275024014
+    },
+    {
+      "flight": "carbonZ_2018-10-05-14-37-22_3_left_aileron_failure",
+      "label": "failure",
+      "windows": 125,
+      "anomaly_windows": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.14779210515499955,
+      "score_min": 0.0458514620349002,
+      "score_max": 0.18870987051698002
+    },
+    {
+      "flight": "carbonZ_2018-10-05-16-04-46_engine_failure_with_emr_traj",
+      "label": "failure",
+      "windows": 121,
+      "anomaly_windows": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.14892296585670906,
+      "score_min": 0.08614703825662551,
+      "score_max": 0.20415318854572695
+    },
+    {
+      "flight": "carbonZ_2018-10-18-11-04-08_2_engine_failure_with_emr_traj",
+      "label": "failure",
+      "windows": 157,
+      "anomaly_windows": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.13842640955011054,
+      "score_min": 0.0006032932409677505,
+      "score_max": 0.18465939454995228
+    },
+    {
+      "flight": "carbonZ_2018-10-18-11-08-24_no_failure",
+      "label": "normal",
+      "windows": 31,
+      "anomaly_windows": 0,
+      "anomaly_ratio": 0.0,
+      "score_mean": 0.09543459642376537,
+      "score_min": 0.003556319152420051,
+      "score_max": 0.18144924541422613
+    }
+  ],
+  "skipped": [],
+  "summary": {
+    "flights_total": 47,
+    "normal_flights": 11,
+    "failure_flights": 36,
+    "normal_anomaly_ratio_mean": 0.014555221654613136,
+    "failure_anomaly_ratio_mean": 0.026302968618532506
+  }
+}

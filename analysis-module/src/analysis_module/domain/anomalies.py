@@ -40,6 +40,30 @@ class AnomalyType(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
+class AnomalyReason:
+    """Post-analysis explanation for a model anomaly."""
+
+    group: str
+    score: float
+    confidence: float
+    features: tuple[str, ...] = ()
+    feature_scores: dict[str, float] = field(default_factory=dict)
+    description: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "group": self.group,
+            "score": self.score,
+            "confidence": self.confidence,
+            "features": list(self.features),
+            "feature_scores": self.feature_scores,
+        }
+        if self.description is not None:
+            payload["description"] = self.description
+        return payload
+
+
+@dataclass(frozen=True, slots=True)
 class AnomalySource:
     """One detector contribution to an aggregated anomaly."""
 
@@ -63,6 +87,39 @@ class AnomalySource:
 
 
 @dataclass(frozen=True, slots=True)
+class DetectorTiming:
+    """Execution timing for one detector."""
+
+    detector: str
+    duration_ms: float
+    status: str = "completed"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "detector": self.detector,
+            "duration_ms": self.duration_ms,
+            "status": self.status,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class AnalysisTiming:
+    """Pipeline-level timing for one analysis run."""
+
+    total_ms: float
+    detectors: tuple[DetectorTiming, ...] = ()
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "total_ms": self.total_ms,
+            "detectors": {
+                timing.detector: timing.to_dict()
+                for timing in self.detectors
+            },
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class DetectedAnomaly:
     """Single anomaly detected for a telemetry sample."""
 
@@ -83,6 +140,7 @@ class DetectedAnomaly:
     probable_cause: str | None = None
     cause_confidence: float | None = None
     diagnostic_evidence: dict[str, EvidenceValue] = field(default_factory=dict)
+    reasons: tuple[AnomalyReason, ...] = ()
     recommended_action: str | None = None
     sources: tuple[AnomalySource, ...] = ()
 
@@ -115,6 +173,7 @@ class DetectedAnomaly:
             "affected_parameters": list(self.affected_parameters),
             "evidence": self.evidence,
             "diagnostic_evidence": self.diagnostic_evidence,
+            "reasons": [reason.to_dict() for reason in self.reasons],
         }
         if self.model_name is not None:
             payload["model_name"] = self.model_name
@@ -143,16 +202,41 @@ class AnomalyResult:
     telemetry_timestamp: datetime
     anomalies: tuple[DetectedAnomaly, ...] = ()
     detector_outputs: tuple["DetectorOutput", ...] = ()
+    timing: AnalysisTiming | None = None
 
     @property
     def has_anomalies(self) -> bool:
         return bool(self.anomalies)
 
+    @property
+    def status(self) -> str:
+        if not self.anomalies:
+            return "NORMAL"
+        severity = _highest_severity(self.anomalies)
+        if severity is Severity.CRITICAL:
+            return "CRITICAL"
+        if severity is Severity.WARNING:
+            return "WARNING"
+        return "INFO"
+
+    @property
+    def risk_level(self) -> str:
+        if not self.anomalies:
+            return "NONE"
+        severity = _highest_severity(self.anomalies)
+        if severity is Severity.CRITICAL:
+            return "HIGH"
+        if severity is Severity.WARNING:
+            return "MEDIUM"
+        return "LOW"
+
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload: dict[str, Any] = {
             "drone_id": self.drone_id,
             "telemetry_timestamp": self.telemetry_timestamp.isoformat(),
             "has_anomalies": self.has_anomalies,
+            "status": self.status,
+            "risk_level": self.risk_level,
             "anomalies": [
                 anomaly.to_dict(include_sources=True)
                 for anomaly in self.anomalies
@@ -162,7 +246,22 @@ class AnomalyResult:
                 for output in self.detector_outputs
             },
         }
+        if self.timing is not None:
+            payload["timing"] = self.timing.to_dict()
+        return payload
 
 
 AnalysisResult: TypeAlias = AnomalyResult
 PipelineAnalysisResult: TypeAlias = AnomalyResult
+
+
+def _highest_severity(anomalies: tuple[DetectedAnomaly, ...]) -> Severity:
+    severity_rank = {
+        Severity.INFO: 0,
+        Severity.WARNING: 1,
+        Severity.CRITICAL: 2,
+    }
+    return max(
+        (anomaly.severity for anomaly in anomalies),
+        key=lambda value: severity_rank[value],
+    )

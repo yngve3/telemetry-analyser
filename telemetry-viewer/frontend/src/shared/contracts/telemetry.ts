@@ -34,6 +34,28 @@ export type TelemetryPayload = {
   gps_age_ms?: number | null;
   system_age_ms?: number | null;
   message_quality?: number | null;
+  pos_test_ratio?: number | null;
+  vel_test_ratio?: number | null;
+  hgt_test_ratio?: number | null;
+  mag_test_ratio?: number | null;
+  hdg_test_ratio?: number | null;
+  filter_fault_flags?: number | null;
+  innovation_check_flags?: number | null;
+  gps_check_fail_flags?: number | null;
+  attitude_invalid?: number | null;
+  angular_velocity_invalid?: number | null;
+  local_position_invalid?: number | null;
+  global_position_invalid?: number | null;
+  local_velocity_invalid?: number | null;
+  battery_warning?: number | null;
+  fd_motor_failure?: number | null;
+  fd_critical_failure?: number | null;
+  fd_roll?: number | null;
+  fd_pitch?: number | null;
+  fd_alt?: number | null;
+  fd_motor?: number | null;
+  fd_battery?: number | null;
+  fd_imbalanced_prop?: number | null;
 };
 
 export const sampleTelemetryPayload: TelemetryPayload = {
