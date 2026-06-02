@@ -29,6 +29,7 @@ from analysis_service.presentation.api.schemas.analysis import (
     AnalyzeRequest,
     TelemetryPayloadFormat,
 )
+from analysis_service.presentation.api.schemas.profiles import AnalysisProfileRequest
 from analysis_service.presentation.api.schemas.sessions import (
     AnalysisSessionCreateRequest,
     AnalysisSessionDeletedResponse,
@@ -83,6 +84,24 @@ async def get_session(
         return AnalysisSessionResponse.from_session(manager.get_session(session_id))
     except SessionNotFoundError as exc:
         raise _session_not_found(session_id) from exc
+
+
+@router.put("/{session_id}/profile", response_model=AnalysisSessionResponse)
+async def update_session_profile(
+    session_id: str,
+    request: AnalysisProfileRequest,
+    manager: SessionManagerDep,
+) -> AnalysisSessionResponse:
+    try:
+        session = manager.update_session_profile(session_id, request.to_profile())
+    except SessionNotFoundError as exc:
+        raise _session_not_found(session_id) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    return AnalysisSessionResponse.from_session(session)
 
 
 @router.delete("/{session_id}", response_model=AnalysisSessionDeletedResponse)

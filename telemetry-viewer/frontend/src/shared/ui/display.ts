@@ -2,14 +2,29 @@ import type { DetectorResponse } from "../contracts/analysisProfile";
 
 export type Translate = (key: string, fallback?: string) => string;
 
-const hiddenDetectorNames = new Set(["graph_based"]);
+export const supportedAnalyzerNames = [
+  "rule_based",
+  "correlation_based",
+  "isolation_forest",
+  "autoencoder",
+] as const;
+
+const supportedAnalyzerOrder: Map<string, number> = new Map(
+  supportedAnalyzerNames.map((name, index) => [name, index]),
+);
 
 export function isVisibleDetectorName(name: string): boolean {
-  return !hiddenDetectorNames.has(name);
+  return supportedAnalyzerOrder.has(name);
 }
 
 export function visibleDetectors(detectors: DetectorResponse[]): DetectorResponse[] {
-  return detectors.filter((detector) => isVisibleDetectorName(detector.name));
+  return detectors
+    .filter((detector) => isVisibleDetectorName(detector.name))
+    .sort(
+      (left, right) =>
+        (supportedAnalyzerOrder.get(left.name) ?? Number.MAX_SAFE_INTEGER) -
+        (supportedAnalyzerOrder.get(right.name) ?? Number.MAX_SAFE_INTEGER),
+    );
 }
 
 export function formatDetectorName(name: string, t: Translate): string {

@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test";
 
 import {
-  adaptiveCorrelationProfile,
   analyzeTelemetry,
   anomalyTypes,
   cleanupPipeline,
@@ -10,6 +9,7 @@ import {
   deleteJson,
   env,
   getJson,
+  hybridWithoutAutoencoderProfile,
   injectAnomaly,
   listenerPort,
   ruleBasedProfile,
@@ -270,17 +270,17 @@ test.describe("Viewer E2E", () => {
     }
   });
 
-  test("viewer renders adaptive correlation output and timing", async ({
+  test("viewer renders hybrid analyzer output and timing", async ({
     page,
     request,
   }) => {
-    const sessionId = uniqueId("viewer-adaptive");
+    const sessionId = uniqueId("viewer-hybrid");
     const consoleErrors = captureConsoleErrors(page);
 
     try {
       await createAnalysisSession(request, {
         sessionId,
-        profile: adaptiveCorrelationProfile(),
+        profile: hybridWithoutAutoencoderProfile(),
       });
       await analyzeTelemetry(
         request,
@@ -304,7 +304,10 @@ test.describe("Viewer E2E", () => {
       const detectorPanel = page.locator("section.data-panel", {
         hasText: "Detector outputs",
       });
-      await expect(detectorPanel).toContainText("Adaptive correlation");
+      await expect(detectorPanel).toContainText("Rules");
+      await expect(detectorPanel).toContainText("Correlation model");
+      await expect(detectorPanel).toContainText("Isolation forest");
+      await expect(detectorPanel).not.toContainText("Adaptive correlation");
       await expect(detectorPanel).toContainText("No detector anomalies.");
 
       const timingPanel = page.locator("section.data-panel", {
@@ -312,7 +315,8 @@ test.describe("Viewer E2E", () => {
       });
       await expect(timingPanel).toContainText("Total time");
       await expect(timingPanel).toContainText("Rules");
-      await expect(timingPanel).toContainText("Adaptive correlation");
+      await expect(timingPanel).toContainText("Correlation model");
+      await expect(timingPanel).toContainText("Isolation forest");
       await expect(timingPanel).toContainText(/ms|<1 ms/);
 
       expect(consoleErrors).toEqual([]);
@@ -324,19 +328,134 @@ test.describe("Viewer E2E", () => {
     }
   });
 
-  test("viewer renders aggregated adaptive correlation sources", async ({
+  test("viewer renders primary and additional hybrid anomalies", async ({
     page,
     request,
   }) => {
-    const sessionId = uniqueId("viewer-adaptive-sources");
+    const sessionId = uniqueId("viewer-primary-anomaly");
     const consoleErrors = captureConsoleErrors(page);
 
     try {
       await createAnalysisSession(request, {
         sessionId,
-        profile: adaptiveCorrelationProfile({
-          enabled_rules: ["motion_inconsistency"],
+        profile: hybridWithoutAutoencoderProfile({
+          enabled_rules: ["low_battery", "motion_inconsistency"],
         }),
+      });
+      await analyzeTelemetry(
+        request,
+        sessionId,
+        telemetryPayload({
+          timestamp: "2026-05-24T12:00:00.000Z",
+          battery_percent: 18,
+          ground_speed_m_s: 1,
+          velocity_x_m_s: 1,
+          velocity_y_m_s: 0,
+        }),
+      );
+      await analyzeTelemetry(
+        request,
+        sessionId,
+        telemetryPayload({
+          timestamp: "2026-05-24T12:00:01.000Z",
+          battery_percent: 18,
+          latitude_deg: 47.399742,
+          ground_speed_m_s: 1,
+          velocity_x_m_s: 20,
+          velocity_y_m_s: 0,
+        }),
+      );
+
+      await openViewer(page);
+      await selectSession(page, sessionId);
+
+      const anomalyPanel = page.locator("section.data-panel", {
+        has: page.getByRole("heading", { name: "Anomaly results" }),
+      });
+      await expect(anomalyPanel).toContainText("Primary anomaly");
+      await expect(anomalyPanel).toContainText("Motion inconsistency");
+      await expect(anomalyPanel).toContainText("Rules");
+      await expect(anomalyPanel).toContainText("Correlation model");
+      await expect(anomalyPanel).toContainText("Cause");
+      await expect(anomalyPanel).toContainText(/100%|90%|80%/);
+
+      const additional = anomalyPanel.locator("details.secondary-anomalies");
+      await expect(additional).toContainText("Possible additional deviations");
+      await additional.locator(":scope > summary").click();
+      await expect(additional).toContainText("Low battery");
+
+      expect(consoleErrors).toEqual([]);
+    } finally {
+      await deleteJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/sessions/${sessionId}`,
+      );
+    }
+  });
+
+  test("viewer keeps short anomaly visible after a clear result", async ({
+    page,
+    request,
+  }) => {
+    const sessionId = uniqueId("viewer-held-anomaly");
+    const consoleErrors = captureConsoleErrors(page);
+
+    try {
+      await createAnalysisSession(request, {
+        sessionId,
+        profile: ruleBasedProfile(),
+      });
+      await analyzeTelemetry(
+        request,
+        sessionId,
+        telemetryPayload({ battery_percent: 10 }),
+      );
+
+      await openViewer(page);
+      await selectSession(page, sessionId);
+
+      const anomalyPanel = page.locator("section.data-panel", {
+        has: page.getByRole("heading", { name: "Anomaly results" }),
+      });
+      await expect(anomalyPanel).toContainText("Low battery");
+
+      await analyzeTelemetry(
+        request,
+        sessionId,
+        telemetryPayload({
+          battery_percent: 95,
+          timestamp: "2026-05-24T12:00:01.000Z",
+        }),
+      );
+      await expect(anomalyPanel).toContainText("held briefly");
+      await expect(anomalyPanel).toContainText("Low battery");
+
+      expect(consoleErrors).toEqual([]);
+    } finally {
+      await deleteJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/sessions/${sessionId}`,
+      );
+    }
+  });
+
+  test("viewer renders aggregated correlation sources", async ({
+    page,
+    request,
+  }) => {
+    const sessionId = uniqueId("viewer-correlation-sources");
+    const consoleErrors = captureConsoleErrors(page);
+
+    try {
+      await createAnalysisSession(request, {
+        sessionId,
+        profile: {
+          ...hybridWithoutAutoencoderProfile({
+            enabled_detectors: ["rule_based", "correlation_based"],
+            model_window_size: 5,
+          }),
+          enabled_rules: ["motion_inconsistency"],
+        },
       });
       await analyzeTelemetry(
         request,
@@ -363,10 +482,10 @@ test.describe("Viewer E2E", () => {
       });
       await expect(anomalyPanel).toContainText("Motion inconsistency");
       await expect(anomalyPanel).toContainText("Rules");
-      await expect(anomalyPanel).toContainText("Adaptive correlation");
+      await expect(anomalyPanel).toContainText("Correlation model");
       await anomalyPanel.getByText("Detector contribution").click();
-      await expect(anomalyPanel).toContainText("Position-speed error");
-      await expect(anomalyPanel).toContainText("Exceeded errors");
+      await expect(anomalyPanel).toContainText("Ground speed delta");
+      await expect(anomalyPanel).toContainText("Vector speed delta");
 
       expect(consoleErrors).toEqual([]);
     } finally {
@@ -377,31 +496,60 @@ test.describe("Viewer E2E", () => {
     }
   });
 
-  test("viewer profile toggle rule-based", async ({ page, request }) => {
+  test("viewer profile saves selected analyzers", async ({ page, request }) => {
+    const sessionId = uniqueId("viewer-analyzers");
     await request.put(`${env.analysisBaseUrl}/analysis/profile`, {
       data: ruleBasedProfile(),
     });
 
     try {
+      await createAnalysisSession(request, {
+        sessionId,
+        profile: ruleBasedProfile(),
+      });
+
       await openViewer(page);
+      await selectSession(page, sessionId);
 
       const analyzersPanel = page.locator("section.data-panel", {
-        hasText: "Analyzers",
+        has: page.getByRole("heading", { name: "Analyzers", exact: true }),
       });
       const ruleBasedButton = analyzersPanel.getByRole("button", {
         name: /Rules/,
       });
+      const correlationButton = analyzersPanel.getByRole("button", {
+        name: /Correlation model/,
+      });
+      const isolationForestButton = analyzersPanel.getByRole("button", {
+        name: /Isolation forest/,
+      });
+      const autoencoderButton = analyzersPanel.getByRole("button", {
+        name: /Autoencoder/,
+      });
 
       await expect(ruleBasedButton).toHaveAttribute("aria-pressed", "true");
-      await ruleBasedButton.click();
-      await expect(ruleBasedButton).toHaveAttribute("aria-pressed", "false");
-      await ruleBasedButton.click();
-      await expect(ruleBasedButton).toHaveAttribute("aria-pressed", "true");
+      await expect(correlationButton).toHaveAttribute("aria-pressed", "false");
+      await expect(isolationForestButton).toHaveAttribute("aria-pressed", "false");
+      await expect(autoencoderButton).toHaveAttribute("aria-pressed", "false");
+      await expect(analyzersPanel).not.toContainText("Adaptive correlation");
+
+      await correlationButton.click();
+      await isolationForestButton.click();
+      await expect(correlationButton).toHaveAttribute("aria-pressed", "true");
+      await expect(isolationForestButton).toHaveAttribute("aria-pressed", "true");
 
       await Promise.all([
         page.waitForResponse(
           (response) =>
             response.url().includes("/analysis/profile") &&
+            response.request().method() === "PUT" &&
+            response.ok(),
+        ),
+        page.waitForResponse(
+          (response) =>
+            response
+              .url()
+              .includes(`/analysis/sessions/${sessionId}/profile`) &&
             response.request().method() === "PUT" &&
             response.ok(),
         ),
@@ -412,12 +560,48 @@ test.describe("Viewer E2E", () => {
         request,
         `${env.analysisBaseUrl}/analysis/profile`,
       );
-      expect(profile.enabled_detectors).toEqual(["rule_based"]);
+      expect(profile.enabled_detectors).toEqual([
+        "rule_based",
+        "correlation_based",
+        "isolation_forest",
+      ]);
+      expect(profile.enabled_models).toEqual([
+        "rule_based",
+        "correlation_based",
+        "isolation_forest",
+      ]);
+      const session = await getJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/sessions/${sessionId}`,
+      );
+      expect(session.profile.enabled_detectors).toEqual([
+        "rule_based",
+        "correlation_based",
+        "isolation_forest",
+      ]);
+
+      const result = await analyzeTelemetry(
+        request,
+        sessionId,
+        telemetryPayload({ drone_id: "viewer-analyzers" }),
+      );
+      expect(Object.keys(result.detector_outputs)).toEqual(
+        expect.arrayContaining([
+          "rule_based",
+          "correlation_based",
+          "isolation_forest",
+        ]),
+      );
+
+      await page.reload();
+      await expect(correlationButton).toHaveAttribute("aria-pressed", "true");
+      await expect(isolationForestButton).toHaveAttribute("aria-pressed", "true");
       await expect(ruleBasedButton).toHaveAttribute("aria-pressed", "true");
     } finally {
       await request.put(`${env.analysisBaseUrl}/analysis/profile`, {
         data: ruleBasedProfile(),
       });
+      await request.delete(`${env.analysisBaseUrl}/analysis/sessions/${sessionId}`);
     }
   });
 });
@@ -432,7 +616,7 @@ async function openViewer(page) {
 
 async function selectSession(page, sessionId) {
   await page.getByLabel("Session ID").fill(sessionId);
-  await page.getByRole("button", { name: "Select" }).click();
+  await page.getByRole("button", { name: "Open session" }).click();
   await expect(page.locator(".session-metrics")).toContainText(sessionId);
 }
 

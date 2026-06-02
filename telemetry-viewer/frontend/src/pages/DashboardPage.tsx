@@ -14,10 +14,13 @@ import {
   createAnalysisSession,
   deleteAnalysisSession,
   getAnalysisProfile,
+  getAnalysisSession,
   getAnalysisSessionState,
   listDetectors,
   updateAnalysisProfile,
+  updateAnalysisSessionProfile,
 } from "../shared/api/analysisServiceClient";
+import { ApiError } from "../shared/api/http";
 import type { AnomalyResult } from "../shared/contracts/anomalyResult";
 import type { AnalysisProfile } from "../shared/contracts/analysisProfile";
 import {
@@ -29,6 +32,10 @@ import { useI18n } from "../shared/i18n/I18nProvider";
 import { EmptyState } from "../shared/ui/EmptyState";
 import { formatDate, formatDurationMs } from "../shared/ui/format";
 import { StatusPill } from "../shared/ui/StatusPill";
+import {
+  readActiveSessionId,
+  writeActiveSessionId,
+} from "../shared/state/activeSession";
 
 type ResultHistoryEntry = {
   key: string;
@@ -41,7 +48,7 @@ type ResultHistoryEntry = {
 export function DashboardPage() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
-  const [activeSessionId, setActiveSessionId] = useState("");
+  const [activeSessionId, setActiveSessionIdState] = useState(readActiveSessionId);
   const [profileDraft, setProfileDraft] = useState<AnalysisProfile | null>(null);
   const [telemetryText, setTelemetryText] = useState(
     JSON.stringify(sampleTelemetryPayload, null, 2),
@@ -71,6 +78,12 @@ export function DashboardPage() {
       setProfileDraft(profileQuery.data);
     }
   }, [profileQuery.data]);
+
+  const setActiveSessionId = useCallback((sessionId: string) => {
+    const trimmed = sessionId.trim();
+    writeActiveSessionId(trimmed);
+    setActiveSessionIdState(trimmed);
+  }, []);
 
   const rememberResult = useCallback(
     (
@@ -109,14 +122,56 @@ export function DashboardPage() {
   }, [sessionStateQuery.data, rememberResult]);
 
   const saveProfileMutation = useMutation({
-    mutationFn: updateAnalysisProfile,
-    onSuccess: (profile) => {
+    mutationFn: async (profile: AnalysisProfile) => {
+      const savedProfile = await updateAnalysisProfile(profile);
+      if (!activeSessionId) {
+        return { profile: savedProfile, session: null };
+      }
+      let session = null;
+      try {
+        session = await updateAnalysisSessionProfile(activeSessionId, savedProfile);
+      } catch (error) {
+        if (!(error instanceof ApiError) || error.status !== 404) {
+          throw error;
+        }
+        setActiveSessionId("");
+      }
+      return { profile: savedProfile, session };
+    },
+    onSuccess: ({ profile, session }) => {
       setProfileDraft(profile);
       queryClient.setQueryData(["analysis-profile"], profile);
+      if (session) {
+        queryClient.setQueryData(["analysis-session-state", session.session_id], {
+          session,
+          last_telemetry: null,
+          last_result: null,
+        });
+      }
     },
   });
-  const createSessionMutation = useMutation({
-    mutationFn: createAnalysisSession,
+  const openSessionMutation = useMutation({
+    mutationFn: async (request: {
+      sessionId: string | null;
+      droneId: string | null;
+      profile: AnalysisProfile | null;
+    }) => {
+      const sessionId = request.sessionId?.trim() || null;
+      if (sessionId) {
+        try {
+          return await getAnalysisSession(sessionId);
+        } catch (error) {
+          if (!(error instanceof ApiError) || error.status !== 404) {
+            throw error;
+          }
+        }
+      }
+      return createAnalysisSession({
+        session_id: sessionId,
+        drone_id: request.droneId,
+        profile: request.profile,
+      });
+    },
     onSuccess: (session) => {
       setActiveSessionId(session.session_id);
       queryClient.setQueryData(["analysis-session-state", session.session_id], {
@@ -180,14 +235,14 @@ export function DashboardPage() {
       <div className="dashboard-main">
         <SessionPanel
           activeSessionId={activeSessionId}
-          createSessionError={asError(createSessionMutation.error)}
+          createSessionError={asError(openSessionMutation.error)}
           deleteSessionError={asError(deleteSessionMutation.error)}
-          isCreatingSession={createSessionMutation.isPending}
+          isCreatingSession={openSessionMutation.isPending}
           isDeletingSession={deleteSessionMutation.isPending}
-          onCreateSession={(sessionId, droneId) =>
-            createSessionMutation.mutate({
-              session_id: sessionId,
-              drone_id: droneId,
+          onOpenSession={(sessionId, droneId) =>
+            openSessionMutation.mutate({
+              sessionId,
+              droneId,
               profile: profileDraft,
             })
           }
@@ -195,7 +250,6 @@ export function DashboardPage() {
           onRefresh={() => {
             void sessionStateQuery.refetch();
           }}
-          onSetActiveSessionId={setActiveSessionId}
           session={sessionStateQuery.data?.session}
           sessionLoadError={asError(sessionStateQuery.error)}
         />

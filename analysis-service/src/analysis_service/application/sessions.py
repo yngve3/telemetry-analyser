@@ -49,6 +49,14 @@ class AnalysisSession:
         self.last_result = result
         return result
 
+    def update_profile(self, profile: AnalysisProfile) -> None:
+        self.profile = profile
+        self.analyzer = create_analyzer(profile.to_analyzer_config())
+        self.last_analyzed_at = None
+        self.samples_analyzed = 0
+        self.last_telemetry = None
+        self.last_result = None
+
     def to_dict(self) -> dict[str, object]:
         return {
             "session_id": self.session_id,
@@ -105,6 +113,16 @@ class SessionManager:
         session = self._sessions.get(session_id)
         if session is None:
             raise SessionNotFoundError(session_id)
+        return session
+
+    def update_session_profile(
+        self,
+        session_id: str,
+        profile: AnalysisProfile,
+    ) -> AnalysisSession:
+        self._validate_profile(profile)
+        session = self.get_session(session_id)
+        session.update_profile(profile)
         return session
 
     def delete_session(self, session_id: str) -> AnalysisSession:

@@ -18,7 +18,7 @@ COPY analysis-service/pyproject.toml analysis-service/README.md ./analysis-servi
 COPY analysis-service/src ./analysis-service/src
 
 RUN pip install --no-cache-dir --no-build-isolation \
-    ./analysis-module \
+    './analysis-module[autoencoder]' \
     ./telemetry-converter \
     ./analysis-service
 

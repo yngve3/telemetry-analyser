@@ -1,5 +1,6 @@
 import type { AnalysisProfile } from "../../../shared/contracts/analysisProfile";
 import { useI18n } from "../../../shared/i18n/I18nProvider";
+import { isVisibleDetectorName } from "../../../shared/ui/display";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { JsonPreview } from "../../../shared/ui/JsonPreview";
 import { StatusPill } from "../../../shared/ui/StatusPill";
@@ -47,35 +48,20 @@ export function AnalysisProfilePanel({
     onChange({ ...currentProfile, ...patch });
   }
 
-  function updateEnabledRules(value: string) {
-    const enabledRules = value
-      .split(/[,\n]/)
-      .map((item) => item.trim())
-      .filter(Boolean);
-    setProfile({ enabled_rules: enabledRules.length > 0 ? enabledRules : null });
-  }
+  const enabledAnalyzerCount =
+    currentProfile.enabled_detectors.filter(isVisibleDetectorName).length;
 
   return (
     <section className="data-panel">
       <div className="panel-header">
         <h2>{t("profile.title", "Analysis profile")}</h2>
         <StatusPill
-          label={`${currentProfile.enabled_detectors.length} ${t("profile.enabled", "enabled")}`}
-          tone={currentProfile.enabled_detectors.length > 0 ? "success" : "danger"}
+          label={`${enabledAnalyzerCount} ${t("profile.enabled", "enabled")}`}
+          tone={enabledAnalyzerCount > 0 ? "success" : "danger"}
         />
       </div>
 
       <div className="panel-body">
-        <label className="field">
-          <span>{t("profile.enabledRules", "Enabled rules")}</span>
-          <textarea
-            className="compact-textarea"
-            spellCheck={false}
-            value={profile.enabled_rules?.join(", ") ?? ""}
-            onChange={(event) => updateEnabledRules(event.target.value)}
-          />
-        </label>
-
         <div className="form-grid">
           <label className="field">
             <span>{t("profile.historySize", "History size")}</span>
@@ -99,28 +85,6 @@ export function AnalysisProfilePanel({
               }
             />
           </label>
-          <label className="field">
-            <span>{t("profile.mlArtifactPath", "ML artifact path")}</span>
-            <input
-              value={profile.ml_model_artifact_path ?? ""}
-              onChange={(event) =>
-                setProfile({
-                  ml_model_artifact_path: emptyToNull(event.target.value),
-                })
-              }
-            />
-          </label>
-          <label className="field">
-            <span>{t("profile.nnArtifactPath", "NN artifact path")}</span>
-            <input
-              value={profile.nn_model_artifact_path ?? ""}
-              onChange={(event) =>
-                setProfile({
-                  nn_model_artifact_path: emptyToNull(event.target.value),
-                })
-              }
-            />
-          </label>
         </div>
 
         <details className="json-details">
@@ -131,7 +95,7 @@ export function AnalysisProfilePanel({
         <div className="button-row">
           <button
             className="primary-button"
-            disabled={isSaving || currentProfile.enabled_detectors.length === 0}
+            disabled={isSaving || enabledAnalyzerCount === 0}
             onClick={onSave}
             type="button"
           >
@@ -143,9 +107,4 @@ export function AnalysisProfilePanel({
       </div>
     </section>
   );
-}
-
-function emptyToNull(value: string): string | null {
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
 }

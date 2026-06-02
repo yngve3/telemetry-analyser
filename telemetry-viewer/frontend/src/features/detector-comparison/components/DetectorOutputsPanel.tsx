@@ -10,6 +10,7 @@ import {
   formatDetectorName,
   formatMessage,
   isVisibleDetectorName,
+  supportedAnalyzerNames,
   visibleDetectors,
 } from "../../../shared/ui/display";
 import { EmptyState } from "../../../shared/ui/EmptyState";
@@ -22,7 +23,7 @@ type DetectorOutputsPanelProps = {
   result: AnomalyResult | null;
 };
 
-const defaultDetectorNames = ["rule_based", "correlation_based", "autoencoder"];
+const defaultDetectorNames = [...supportedAnalyzerNames];
 
 export function DetectorOutputsPanel({
   detectors,

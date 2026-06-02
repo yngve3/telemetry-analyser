@@ -119,6 +119,54 @@ class ResultAggregatorTest(unittest.TestCase):
         self.assertEqual(result.anomalies[0].type, AnomalyType.ANOMALOUS_BEHAVIOR)
         self.assertEqual(result.detector_outputs[1].anomalies, (anomaly,))
 
+    def test_aggregator_sorts_anomalies_by_global_rank(self) -> None:
+        sample = telemetry()
+        low_battery = DetectedAnomaly(
+            type=AnomalyType.LOW_BATTERY,
+            severity=Severity.WARNING,
+            message="Battery low.",
+            confidence=0.95,
+            detector_name="rule_based",
+        )
+        motion_rule = DetectedAnomaly(
+            type=AnomalyType.MOTION_INCONSISTENCY,
+            severity=Severity.CRITICAL,
+            message="Motion mismatch.",
+            confidence=0.8,
+            detector_name="rule_based",
+        )
+        motion_model = DetectedAnomaly(
+            type=AnomalyType.MOTION_INCONSISTENCY,
+            severity=Severity.WARNING,
+            message="Model motion mismatch.",
+            confidence=0.75,
+            detector_name="correlation_based",
+            source="model_based",
+        )
+
+        result = ResultAggregator().aggregate_outputs(
+            sample,
+            (
+                DetectorOutput(
+                    detector_name="rule_based",
+                    detector_kind=DetectorKind.RULE_BASED,
+                    anomalies=(low_battery, motion_rule),
+                ),
+                DetectorOutput(
+                    detector_name="correlation_based",
+                    detector_kind=DetectorKind.MODEL_BASED,
+                    anomalies=(motion_model,),
+                ),
+            ),
+        )
+
+        self.assertEqual(result.anomalies[0].type, AnomalyType.MOTION_INCONSISTENCY)
+        self.assertEqual(result.anomalies[1].type, AnomalyType.LOW_BATTERY)
+        self.assertEqual(
+            [source.detector for source in result.anomalies[0].sources],
+            ["rule_based", "correlation_based"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

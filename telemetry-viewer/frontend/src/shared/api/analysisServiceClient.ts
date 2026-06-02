@@ -71,6 +71,20 @@ export function getAnalysisSession(sessionId: string): Promise<AnalysisSession> 
   );
 }
 
+export function updateAnalysisSessionProfile(
+  sessionId: string,
+  profile: AnalysisProfile,
+): Promise<AnalysisSession> {
+  return requestFromBase<AnalysisSession>(
+    ANALYSIS_API_BASE_URL,
+    `/analysis/sessions/${sessionId}/profile`,
+    {
+      method: "PUT",
+      body: profile,
+    },
+  );
+}
+
 export function deleteAnalysisSession(
   sessionId: string,
 ): Promise<{ session_id: string; deleted: boolean }> {

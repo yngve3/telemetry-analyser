@@ -7,8 +7,12 @@ export type HealthResponse = {
 
 export type DetectorResponse = {
   name: string;
-  kind: string;
+  implementation: string;
+  kind?: string;
   status: string;
+  detector_name: string | null;
+  connected: boolean;
+  description: string;
   aliases: string[];
 };
 
@@ -17,14 +21,16 @@ export type DetectorListResponse = {
 };
 
 export type AnalysisProfile = {
+  model_profile: string;
+  enabled_models: string[];
   enabled_detectors: string[];
   enabled_rules: string[] | null;
   thresholds: Record<string, number>;
   history_size: number;
   model_window_size: number;
   model_artifact_path: string | null;
-  ml_model_artifact_path: string | null;
-  nn_model_artifact_path: string | null;
+  adaptive_correlation_profile_path: string | null;
+  isolation_forest_artifact_path: string | null;
 };
 
 export type AnalysisSessionCreateRequest = {

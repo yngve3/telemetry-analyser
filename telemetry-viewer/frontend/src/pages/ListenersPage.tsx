@@ -3,13 +3,20 @@ import { Plug, RefreshCw, Trash2 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 
 import {
+  createAnalysisSession,
   createListener,
   deleteListener,
+  getAnalysisSession,
   getListener,
   listListeners,
 } from "../shared/api/analysisServiceClient";
+import { ApiError } from "../shared/api/http";
 import type { ListenerResponse } from "../shared/contracts/analysisProfile";
 import { useI18n } from "../shared/i18n/I18nProvider";
+import {
+  readActiveSessionId,
+  writeActiveSessionId,
+} from "../shared/state/activeSession";
 import { EmptyState } from "../shared/ui/EmptyState";
 import { formatDate, formatText } from "../shared/ui/format";
 import { JsonPreview } from "../shared/ui/JsonPreview";
@@ -20,7 +27,7 @@ export function ListenersPage() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const [selectedListenerId, setSelectedListenerId] = useState("");
-  const [sessionId, setSessionId] = useState("uav-001");
+  const [sessionId, setSessionId] = useState(readActiveSessionId() || "uav-001");
   const [bindHost, setBindHost] = useState("0.0.0.0");
   const [bindPort, setBindPort] = useState(14560);
   const [bufferSize, setBufferSize] = useState(4096);
@@ -49,9 +56,13 @@ export function ListenersPage() {
   }, [listenersQuery.data, selectedListenerId]);
 
   const createMutation = useMutation({
-    mutationFn: createListener,
+    mutationFn: async (payload: Parameters<typeof createListener>[0]) => {
+      await ensureAnalysisSession(payload.session_id);
+      return createListener(payload);
+    },
     onSuccess: (listener) => {
       setSelectedListenerId(listener.listener_id);
+      writeActiveSessionId(listener.session_id);
       void queryClient.invalidateQueries({ queryKey: ["analysis-listeners"] });
       void queryClient.invalidateQueries({
         queryKey: ["analysis-session-state", listener.session_id],
@@ -70,8 +81,9 @@ export function ListenersPage() {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const trimmedSessionId = sessionId.trim();
     createMutation.mutate({
-      session_id: sessionId.trim(),
+      session_id: trimmedSessionId,
       protocol: "udp",
       format: "mavlink.v2",
       bind_host: bindHost.trim(),
@@ -89,6 +101,7 @@ export function ListenersPage() {
   const selectedListener =
     listenerQuery.data ??
     listeners.find((listener) => listener.listener_id === selectedListenerId);
+  const sourceTarget = `analysis-service:${bindPort}`;
 
   return (
     <div className="listener-page-grid">
@@ -161,9 +174,30 @@ export function ListenersPage() {
             </button>
           </div>
 
+          <div className="metric-grid listener-setup-metrics">
+            <Metric
+              label={t("listeners.session", "Session")}
+              value={formatText(sessionId.trim())}
+            />
+            <Metric
+              label={t("listeners.endpoint", "Endpoint")}
+              value={`${bindHost.trim()}:${bindPort}`}
+            />
+            <Metric
+              label={t("listeners.sourceTarget", "Source target")}
+              value={sourceTarget}
+            />
+          </div>
+
           {createMutation.error ? (
             <div className="message error">
               {asError(createMutation.error).message}
+            </div>
+          ) : null}
+          {createMutation.data ? (
+            <div className="message success">
+              {t("listeners.created", "Listener is active")}:{" "}
+              {createMutation.data.bind_host}:{createMutation.data.bind_port}
             </div>
           ) : null}
           {deleteMutation.error ? (
@@ -281,6 +315,21 @@ export function ListenersPage() {
       </section>
     </div>
   );
+}
+
+async function ensureAnalysisSession(sessionId: string) {
+  try {
+    await getAnalysisSession(sessionId);
+  } catch (error) {
+    if (!(error instanceof ApiError) || error.status !== 404) {
+      throw error;
+    }
+    await createAnalysisSession({
+      session_id: sessionId,
+      drone_id: sessionId,
+      profile: null,
+    });
+  }
 }
 
 function ListenerDetails({ listener }: { listener: ListenerResponse }) {

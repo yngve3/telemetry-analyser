@@ -4,6 +4,7 @@ import type {
   AnomalySource,
   Severity,
 } from "../../../shared/contracts/anomalyResult";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "../../../shared/i18n/I18nProvider";
 import {
   formatAnomalyType,
@@ -20,9 +21,14 @@ type AnomalyResultsPanelProps = {
   result: AnomalyResult | null;
 };
 
+const ANOMALY_HOLD_MS = 5000;
+
 export function AnomalyResultsPanel({ result }: AnomalyResultsPanelProps) {
   const { t } = useI18n();
-  const anomalies = result?.anomalies ?? [];
+  const { isHolding, result: visibleResult } = useHeldAnomalyResult(result);
+  const anomalies = visibleResult?.anomalies ?? [];
+  const primaryAnomaly = anomalies[0] ?? null;
+  const possibleAnomalies = anomalies.slice(1);
 
   return (
     <section className="data-panel">
@@ -30,32 +36,62 @@ export function AnomalyResultsPanel({ result }: AnomalyResultsPanelProps) {
         <h2>{t("anomalies.title", "Anomaly results")}</h2>
         <StatusPill
           label={
-            result === null
+            visibleResult === null
               ? t("anomalies.noResult", "no result")
-              : result.has_anomalies
+              : visibleResult.has_anomalies
                 ? `${anomalies.length} ${t("anomalies.found", "found")}`
                 : t("anomalies.clear", "clear")
           }
           tone={
-            result === null ? "neutral" : result.has_anomalies ? "danger" : "success"
+            visibleResult === null
+              ? "neutral"
+              : visibleResult.has_anomalies
+                ? "danger"
+                : "success"
           }
         />
+        {isHolding ? (
+          <StatusPill
+            label={t("anomalies.hold", "held briefly")}
+            tone="warning"
+          />
+        ) : null}
       </div>
 
-      {result && anomalies.length > 0 ? (
+      {visibleResult && primaryAnomaly ? (
         <div className="anomaly-card-list">
-          {anomalies.map((anomaly, index) => (
-            <AnomalyCard
-              anomaly={anomaly}
-              key={`${anomaly.type}-${index}`}
-              result={result}
-            />
-          ))}
+          <div>
+            <div className="section-kicker">
+              {t("anomalies.primary", "Primary anomaly")}
+            </div>
+            <AnomalyCard anomaly={primaryAnomaly} result={visibleResult} />
+          </div>
+          {possibleAnomalies.length > 0 ? (
+            <details className="contribution-details secondary-anomalies">
+              <summary>
+                {t(
+                  "anomalies.additional",
+                  "Possible additional deviations",
+                )}{" "}
+                ({possibleAnomalies.length})
+              </summary>
+              <div className="anomaly-card-list">
+                {possibleAnomalies.map((anomaly, index) => (
+                  <AnomalyCard
+                    anomaly={anomaly}
+                    key={`${anomaly.type}-${index}`}
+                    result={visibleResult}
+                    secondary
+                  />
+                ))}
+              </div>
+            </details>
+          ) : null}
         </div>
       ) : (
         <EmptyState
           label={
-            result
+            visibleResult
               ? t("anomalies.noneLatest", "No anomalies in the latest result.")
               : t("anomalies.none", "No analysis result yet.")
           }
@@ -68,9 +104,11 @@ export function AnomalyResultsPanel({ result }: AnomalyResultsPanelProps) {
 function AnomalyCard({
   anomaly,
   result,
+  secondary = false,
 }: {
   anomaly: AggregatedAnomaly;
   result: AnomalyResult;
+  secondary?: boolean;
 }) {
   const { t } = useI18n();
   const visibleSources = anomaly.sources.filter((source) =>
@@ -84,7 +122,7 @@ function AnomalyCard({
   ).filter(isVisibleDetectorName);
 
   return (
-    <article className="anomaly-card">
+    <article className={secondary ? "anomaly-card secondary" : "anomaly-card"}>
       <div className="anomaly-card-header">
         <div>
           <strong className="code-title">{formatAnomalyType(anomaly.type, t)}</strong>
@@ -203,6 +241,86 @@ function AnomalyCard({
       </details>
     </article>
   );
+}
+
+function useHeldAnomalyResult(result: AnomalyResult | null): {
+  isHolding: boolean;
+  result: AnomalyResult | null;
+} {
+  const [visibleResult, setVisibleResult] = useState<AnomalyResult | null>(result);
+  const [isHolding, setIsHolding] = useState(false);
+  const latestResultRef = useRef<AnomalyResult | null>(result);
+  const visibleResultRef = useRef<AnomalyResult | null>(result);
+  const anomalyShownAtRef = useRef(0);
+  const timerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    visibleResultRef.current = visibleResult;
+  }, [visibleResult]);
+
+  useEffect(() => {
+    latestResultRef.current = result;
+    if (timerRef.current !== null) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+
+    const current = visibleResultRef.current;
+    const now = Date.now();
+    if (!current?.has_anomalies) {
+      setVisibleResult(result);
+      setIsHolding(false);
+      if (result?.has_anomalies) {
+        anomalyShownAtRef.current = now;
+      }
+      return;
+    }
+
+    const elapsed = now - anomalyShownAtRef.current;
+    const samePrimary = primaryAnomalyKey(current) === primaryAnomalyKey(result);
+    if (result?.has_anomalies && samePrimary) {
+      setVisibleResult(result);
+      setIsHolding(false);
+      return;
+    }
+
+    if (elapsed >= ANOMALY_HOLD_MS) {
+      setVisibleResult(result);
+      setIsHolding(false);
+      if (result?.has_anomalies) {
+        anomalyShownAtRef.current = now;
+      }
+      return;
+    }
+
+    setIsHolding(true);
+    timerRef.current = window.setTimeout(() => {
+      const latest = latestResultRef.current;
+      setVisibleResult(latest);
+      setIsHolding(false);
+      if (latest?.has_anomalies) {
+        anomalyShownAtRef.current = Date.now();
+      }
+      timerRef.current = null;
+    }, ANOMALY_HOLD_MS - elapsed);
+
+    return () => {
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [result]);
+
+  return useMemo(
+    () => ({ isHolding, result: visibleResult }),
+    [isHolding, visibleResult],
+  );
+}
+
+function primaryAnomalyKey(result: AnomalyResult | null): string {
+  const anomaly = result?.anomalies[0];
+  return anomaly ? `${anomaly.type}:${anomaly.severity}` : "clear";
 }
 
 function SourceContribution({ source }: { source: AnomalySource }) {

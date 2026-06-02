@@ -173,6 +173,29 @@ class AnalysisServiceApiTest(unittest.TestCase):
             ["rule_based", "correlation_based"],
         )
 
+    def test_profile_prefers_enabled_detectors_when_models_are_stale(self) -> None:
+        response = self.client.put(
+            "/analysis/profile",
+            json={
+                "enabled_models": ["rule_based"],
+                "enabled_detectors": [
+                    "rule_based",
+                    "correlation_based",
+                    "isolation_forest",
+                ],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["enabled_models"],
+            ["rule_based", "correlation_based", "isolation_forest"],
+        )
+        self.assertEqual(
+            response.json()["enabled_detectors"],
+            ["rule_based", "correlation_based", "isolation_forest"],
+        )
+
     def test_profile_accepts_adaptive_correlation_profile_path(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             profile_path = Path(directory) / "adaptive_correlation_profile.json"
@@ -251,6 +274,47 @@ class AnalysisServiceApiTest(unittest.TestCase):
         delete_response = self.client.delete("/analysis/sessions/uav-001")
         self.assertEqual(delete_response.status_code, 200)
         self.assertTrue(delete_response.json()["deleted"])
+
+    def test_session_profile_update_rebuilds_active_analyzer(self) -> None:
+        self.client.post(
+            "/analysis/sessions",
+            json={"session_id": "profile-update"},
+        )
+        analyze_response = self.client.post(
+            "/analysis/sessions/profile-update/analyze",
+            json={
+                "format": "unified.telemetry",
+                "telemetry": _telemetry_payload(),
+            },
+        )
+        self.assertEqual(analyze_response.status_code, 200)
+        self.assertEqual(
+            list(analyze_response.json()["detector_outputs"]),
+            ["rule_based"],
+        )
+
+        profile_response = self.client.put(
+            "/analysis/sessions/profile-update/profile",
+            json={"enabled_detectors": ["rule_based", "correlation_based"]},
+        )
+        self.assertEqual(profile_response.status_code, 200)
+        self.assertEqual(
+            profile_response.json()["profile"]["enabled_detectors"],
+            ["rule_based", "correlation_based"],
+        )
+        self.assertEqual(profile_response.json()["samples_analyzed"], 0)
+
+        updated_analyze_response = self.client.post(
+            "/analysis/sessions/profile-update/analyze",
+            json={
+                "format": "unified.telemetry",
+                "telemetry": _telemetry_payload(),
+            },
+        )
+        self.assertEqual(updated_analyze_response.status_code, 200)
+        detector_outputs = updated_analyze_response.json()["detector_outputs"]
+        self.assertIn("rule_based", detector_outputs)
+        self.assertIn("correlation_based", detector_outputs)
 
     def test_unified_telemetry_analysis_returns_module_result_shape(self) -> None:
         self.client.post("/analysis/sessions", json={"session_id": "uav-001"})

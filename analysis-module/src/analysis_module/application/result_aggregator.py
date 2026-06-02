@@ -66,10 +66,11 @@ class ResultAggregator:
             for anomaly in output.anomalies:
                 grouped.setdefault(anomaly.type, []).append((output, anomaly))
 
-        return tuple(
+        anomalies = [
             self._merge_group(anomaly_type, items)
             for anomaly_type, items in grouped.items()
-        )
+        ]
+        return tuple(sorted(anomalies, key=_anomaly_rank, reverse=True))
 
     def _merge_group(
         self,
@@ -135,3 +136,11 @@ def _detector_kind_for_legacy_anomalies():
     from analysis_module.domain import DetectorKind
 
     return DetectorKind.RULE_BASED
+
+
+def _anomaly_rank(anomaly: DetectedAnomaly) -> tuple[int, float, int]:
+    return (
+        _SEVERITY_RANK[anomaly.severity],
+        anomaly.confidence,
+        len(anomaly.sources),
+    )

@@ -6,6 +6,7 @@ import { useI18n } from "../../../shared/i18n/I18nProvider";
 import {
   formatDetectorName,
   isVisibleDetectorName,
+  supportedAnalyzerNames,
   visibleDetectors,
 } from "../../../shared/ui/display";
 import { EmptyState } from "../../../shared/ui/EmptyState";
@@ -22,17 +23,44 @@ type DetectorSelectorPanelProps = {
 };
 
 const fallbackDetectors: DetectorResponse[] = [
-  { name: "rule_based", kind: "rule_based", status: "available", aliases: [] },
+  {
+    name: "rule_based",
+    implementation: "RuleBasedDetector",
+    kind: "rule_based",
+    status: "available",
+    detector_name: "rule_based",
+    connected: true,
+    description: "Known critical telemetry conditions.",
+    aliases: [],
+  },
   {
     name: "correlation_based",
+    implementation: "CorrelationBasedDetector",
     kind: "model_based",
     status: "available",
+    detector_name: "correlation_based",
+    connected: true,
+    description: "Parameter consistency checks.",
     aliases: ["correlation"],
   },
   {
-    name: "autoencoder",
+    name: "isolation_forest",
+    implementation: "IsolationForestDetector",
     kind: "model_based",
     status: "available",
+    detector_name: "isolation_forest",
+    connected: true,
+    description: "Main ML analyzer.",
+    aliases: ["isolationforest"],
+  },
+  {
+    name: "autoencoder",
+    implementation: "AutoencoderDetector",
+    kind: "model_based",
+    status: "available",
+    detector_name: "autoencoder",
+    connected: true,
+    description: "Experimental additional analyzer.",
     aliases: ["nn", "neural_network"],
   },
 ];
@@ -81,7 +109,14 @@ export function DetectorSelectorPanel({
     } else {
       nextEnabled.add(name);
     }
-    onChange({ ...currentProfile, enabled_detectors: Array.from(nextEnabled) });
+    const enabledAnalyzers = supportedAnalyzerNames.filter((item) =>
+      nextEnabled.has(item),
+    );
+    onChange({
+      ...currentProfile,
+      enabled_models: enabledAnalyzers,
+      enabled_detectors: enabledAnalyzers,
+    });
   }
 
   return (
@@ -108,6 +143,7 @@ export function DetectorSelectorPanel({
                 type="button"
               >
                 <strong>{formatDetectorName(detector.name, t)}</strong>
+                <small>{detectorDescription(detector, t)}</small>
                 <span>{t(`status.${detector.status}`, detector.status)}</span>
               </button>
             );
@@ -129,4 +165,8 @@ export function DetectorSelectorPanel({
       </div>
     </section>
   );
+}
+
+function detectorDescription(detector: DetectorResponse, t: ReturnType<typeof useI18n>["t"]) {
+  return t(`detectorDescription.${detector.name}`, detector.description);
 }

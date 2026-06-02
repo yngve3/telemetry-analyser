@@ -1,5 +1,5 @@
 import { RefreshCw, Trash2 } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import type { AnalysisSession } from "../../../shared/contracts/analysisProfile";
 import { useI18n } from "../../../shared/i18n/I18nProvider";
@@ -11,10 +11,9 @@ type SessionPanelProps = {
   deleteSessionError: Error | null;
   isCreatingSession: boolean;
   isDeletingSession: boolean;
-  onCreateSession: (sessionId: string | null, droneId: string | null) => void;
   onDeleteSession: (sessionId: string) => void;
+  onOpenSession: (sessionId: string | null, droneId: string | null) => void;
   onRefresh: () => void;
-  onSetActiveSessionId: (sessionId: string) => void;
   session: AnalysisSession | undefined;
   sessionLoadError: Error | null;
 };
@@ -25,10 +24,9 @@ export function SessionPanel({
   deleteSessionError,
   isCreatingSession,
   isDeletingSession,
-  onCreateSession,
   onDeleteSession,
+  onOpenSession,
   onRefresh,
-  onSetActiveSessionId,
   session,
   sessionLoadError,
 }: SessionPanelProps) {
@@ -36,9 +34,15 @@ export function SessionPanel({
   const [sessionIdInput, setSessionIdInput] = useState("uav-001");
   const [droneIdInput, setDroneIdInput] = useState("uav-001");
 
+  useEffect(() => {
+    if (activeSessionId) {
+      setSessionIdInput(activeSessionId);
+    }
+  }, [activeSessionId]);
+
   function submitSession(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onCreateSession(emptyToNull(sessionIdInput), emptyToNull(droneIdInput));
+    onOpenSession(emptyToNull(sessionIdInput), emptyToNull(droneIdInput));
   }
 
   return (
@@ -78,14 +82,7 @@ export function SessionPanel({
               disabled={isCreatingSession}
               type="submit"
             >
-              {t("session.create", "Create session")}
-            </button>
-            <button
-              className="secondary-button"
-              onClick={() => onSetActiveSessionId(sessionIdInput.trim())}
-              type="button"
-            >
-              {t("session.select", "Select")}
+              {t("session.open", "Open session")}
             </button>
             <button
               className="danger-button"

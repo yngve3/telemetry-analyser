@@ -7,6 +7,7 @@ import { useI18n } from "../../../shared/i18n/I18nProvider";
 import {
   formatDetectorName,
   isVisibleDetectorName,
+  supportedAnalyzerNames,
   visibleDetectors,
 } from "../../../shared/ui/display";
 import { EmptyState } from "../../../shared/ui/EmptyState";
@@ -18,7 +19,7 @@ type AnalysisTimingPanelProps = {
   result: AnomalyResult | null;
 };
 
-const defaultDetectorNames = ["rule_based", "correlation_based", "autoencoder"];
+const defaultDetectorNames = [...supportedAnalyzerNames];
 
 export function AnalysisTimingPanel({
   detectors,

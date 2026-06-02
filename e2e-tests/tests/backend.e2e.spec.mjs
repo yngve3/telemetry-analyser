@@ -982,6 +982,62 @@ test.describe("Backend E2E", () => {
     }
   });
 
+  test("hybrid analysis ranks primary anomaly before additional anomalies", async ({
+    request,
+  }) => {
+    const { sessionId } = await createAnalysisSession(request, {
+      sessionId: uniqueId("hybrid-primary"),
+      profile: hybridWithoutAutoencoderProfile({
+        enabled_rules: ["low_battery", "motion_inconsistency"],
+      }),
+    });
+
+    try {
+      await analyzeTelemetry(
+        request,
+        sessionId,
+        telemetryPayload({
+          timestamp: "2026-05-24T12:00:00.000Z",
+          battery_percent: 18,
+          ground_speed_m_s: 1,
+          velocity_x_m_s: 1,
+          velocity_y_m_s: 0,
+        }),
+      );
+      const result = await analyzeTelemetry(
+        request,
+        sessionId,
+        telemetryPayload({
+          timestamp: "2026-05-24T12:00:01.000Z",
+          battery_percent: 18,
+          latitude_deg: 47.399742,
+          ground_speed_m_s: 1,
+          velocity_x_m_s: 20,
+          velocity_y_m_s: 0,
+        }),
+      );
+
+      expect(result.anomalies.length).toBeGreaterThanOrEqual(2);
+      expect(result.anomalies[0].type).toBe("MOTION_INCONSISTENCY");
+      expect(result.anomalies[0].severity).toBe("CRITICAL");
+      expect(result.anomalies.map((anomaly) => anomaly.type)).toContain(
+        "LOW_BATTERY",
+      );
+      expect(result.anomalies[0].sources.map((source) => source.detector)).toEqual(
+        expect.arrayContaining(["rule_based", "correlation_based"]),
+      );
+      expect(result.detector_outputs).toHaveProperty("rule_based");
+      expect(result.detector_outputs).toHaveProperty("correlation_based");
+      expect(result.detector_outputs).toHaveProperty("isolation_forest");
+      expect(result.detector_outputs).not.toHaveProperty("autoencoder");
+    } finally {
+      await deleteJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/sessions/${sessionId}`,
+      );
+    }
+  });
+
   test("create UDP MAVLink listener", async ({ request }, testInfo) => {
     const { sessionId } = await createAnalysisSession(request, {
       sessionId: uniqueId("listener"),

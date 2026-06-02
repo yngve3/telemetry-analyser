@@ -21,7 +21,7 @@ class AnalysisProfileRequest(BaseModel):
 
     def to_profile(self) -> AnalysisProfile:
         enabled_models = self.enabled_models
-        if enabled_models is None and self.enabled_detectors is not None:
+        if self.enabled_detectors is not None:
             enabled_models = self.enabled_detectors
         return AnalysisProfile(
             model_profile=self.model_profile,
