@@ -81,7 +81,7 @@ class TickRequest(BaseModel):
 
 
 class UdpStreamRequest(BaseModel):
-    host: str = "127.0.0.1"
-    port: int = Field(default=14550, ge=1, le=65535)
+    host: str = "analysis-service"
+    port: int = Field(default=14560, ge=1, le=65535)
     frequency_hz: float | None = Field(default=None, gt=0)
     repeat: bool | None = None

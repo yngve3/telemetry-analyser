@@ -50,6 +50,7 @@ export function DashboardPage() {
   const queryClient = useQueryClient();
   const [activeSessionId, setActiveSessionIdState] = useState(readActiveSessionId);
   const [profileDraft, setProfileDraft] = useState<AnalysisProfile | null>(null);
+  const [profileDraftSourceKey, setProfileDraftSourceKey] = useState("");
   const [telemetryText, setTelemetryText] = useState(
     JSON.stringify(sampleTelemetryPayload, null, 2),
   );
@@ -74,10 +75,29 @@ export function DashboardPage() {
     retry: false,
   });
   useEffect(() => {
-    if (profileQuery.data) {
-      setProfileDraft(profileQuery.data);
+    const session = sessionStateQuery.data?.session;
+    if (session) {
+      const sourceKey = profileSourceKey("session", session.session_id, session.profile);
+      if (profileDraftSourceKey !== sourceKey) {
+        setProfileDraft(session.profile);
+        setProfileDraftSourceKey(sourceKey);
+      }
+      return;
     }
-  }, [profileQuery.data]);
+
+    if (!activeSessionId && profileQuery.data) {
+      const sourceKey = profileSourceKey("global", "default", profileQuery.data);
+      if (profileDraftSourceKey !== sourceKey) {
+        setProfileDraft(profileQuery.data);
+        setProfileDraftSourceKey(sourceKey);
+      }
+    }
+  }, [
+    activeSessionId,
+    profileDraftSourceKey,
+    profileQuery.data,
+    sessionStateQuery.data?.session,
+  ]);
 
   const setActiveSessionId = useCallback((sessionId: string) => {
     const trimmed = sessionId.trim();
@@ -367,6 +387,22 @@ function resultKey(result: AnomalyResult): string {
     result.has_anomalies ? "1" : "0",
     result.anomalies.map((anomaly) => anomaly.type).join("."),
   ].join("|");
+}
+
+function profileSourceKey(
+  scope: "global" | "session",
+  id: string,
+  profile: AnalysisProfile,
+): string {
+  return JSON.stringify({
+    scope,
+    id,
+    enabled_detectors: profile.enabled_detectors,
+    enabled_models: profile.enabled_models,
+    history_size: profile.history_size,
+    model_window_size: profile.model_window_size,
+    thresholds: profile.thresholds,
+  });
 }
 
 function firstError(...errors: unknown[]): Error | null {

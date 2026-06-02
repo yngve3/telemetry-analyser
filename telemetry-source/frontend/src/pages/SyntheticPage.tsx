@@ -107,8 +107,8 @@ const initialMission: MissionScriptRequest = {
 };
 
 const initialUdp: UdpStreamRequest = {
-  host: "127.0.0.1",
-  port: 14551,
+  host: "analysis-service",
+  port: 14560,
   frequency_hz: 20,
 };
 

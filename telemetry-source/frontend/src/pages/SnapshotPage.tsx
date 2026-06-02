@@ -82,8 +82,8 @@ const samplePayload: SnapshotCreateRequest = {
 };
 
 const initialUdp: UdpStreamRequest = {
-  host: "127.0.0.1",
-  port: 14553,
+  host: "analysis-service",
+  port: 14560,
   frequency_hz: 10,
   repeat: true,
 };

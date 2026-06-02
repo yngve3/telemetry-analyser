@@ -55,6 +55,9 @@ _GROUP_MAX_AGE_MS = {
     _GPS_GROUP: 1_500,
     _SYSTEM_GROUP: 3_000,
 }
+_MIN_UNIX_GPS_TIMESTAMP_US = int(
+    datetime(2000, 1, 1, tzinfo=UTC).timestamp() * 1_000_000
+)
 
 
 class MavlinkDecodeError(ValueError):
@@ -235,7 +238,7 @@ def _validate_crc(
 
 
 def _apply_heartbeat(payload: bytes, values: dict[str, Any]) -> None:
-    _require_payload_length(payload, 9, HEARTBEAT_MSG_ID)
+    payload = _coerce_payload_length(payload, 9, HEARTBEAT_MSG_ID)
     custom_mode, _, _, base_mode, system_status, _ = struct.unpack("<IBBBBB", payload)
 
     values["flight_mode"] = _flight_mode(custom_mode)
@@ -244,7 +247,7 @@ def _apply_heartbeat(payload: bytes, values: dict[str, Any]) -> None:
 
 
 def _apply_attitude(payload: bytes, values: dict[str, Any]) -> None:
-    _require_payload_length(payload, 28, ATTITUDE_MSG_ID)
+    payload = _coerce_payload_length(payload, 28, ATTITUDE_MSG_ID)
     time_boot_ms, roll, pitch, yaw, roll_speed, pitch_speed, yaw_speed = struct.unpack(
         "<Iffffff",
         payload,
@@ -260,7 +263,7 @@ def _apply_attitude(payload: bytes, values: dict[str, Any]) -> None:
 
 
 def _apply_global_position_int(payload: bytes, values: dict[str, Any]) -> None:
-    _require_payload_length(payload, 28, GLOBAL_POSITION_INT_MSG_ID)
+    payload = _coerce_payload_length(payload, 28, GLOBAL_POSITION_INT_MSG_ID)
     time_boot_ms, lat, lon, altitude, relative_altitude, vx, vy, vz, heading = struct.unpack(
         "<IiiiihhhH",
         payload,
@@ -281,12 +284,12 @@ def _apply_global_position_int(payload: bytes, values: dict[str, Any]) -> None:
 
 
 def _apply_gps_raw_int(payload: bytes, values: dict[str, Any]) -> None:
-    _require_payload_length(payload, 30, GPS_RAW_INT_MSG_ID)
+    payload = _coerce_payload_length(payload, 30, GPS_RAW_INT_MSG_ID)
     timestamp_usec, lat, lon, altitude, eph, epv, speed, heading, fix_type, satellites = (
         struct.unpack("<QiiiHHHHBB", payload)
     )
 
-    values["timestamp"] = datetime.fromtimestamp(timestamp_usec / 1_000_000, UTC)
+    values["timestamp"] = _gps_timestamp(timestamp_usec)
     values["latitude_deg"] = lat / 10_000_000
     values["longitude_deg"] = lon / 10_000_000
     values["altitude_m"] = altitude / 1000
@@ -300,8 +303,14 @@ def _apply_gps_raw_int(payload: bytes, values: dict[str, Any]) -> None:
     values["satellites_visible"] = satellites
 
 
+def _gps_timestamp(timestamp_usec: int) -> datetime:
+    if timestamp_usec >= _MIN_UNIX_GPS_TIMESTAMP_US:
+        return datetime.fromtimestamp(timestamp_usec / 1_000_000, UTC)
+    return datetime.now(tz=UTC)
+
+
 def _apply_sys_status(payload: bytes, values: dict[str, Any]) -> None:
-    _require_payload_length(payload, 31, SYS_STATUS_MSG_ID)
+    payload = _coerce_payload_length(payload, 31, SYS_STATUS_MSG_ID)
     (
         _sensor_present,
         _sensor_enabled,
@@ -315,7 +324,10 @@ def _apply_sys_status(payload: bytes, values: dict[str, Any]) -> None:
 
     values["sensor_health_flags"] = sensor_health
     values["battery_voltage_v"] = voltage_mv / 1000
-    values["battery_current_a"] = current_ca / 100
+    if current_ca >= 0:
+        values["battery_current_a"] = current_ca / 100
+    else:
+        values.pop("battery_current_a", None)
     values["battery_percent"] = float(battery_remaining)
 
 
@@ -460,11 +472,14 @@ def _has_required_telemetry_fields(values: dict[str, Any]) -> bool:
     )
 
 
-def _require_payload_length(payload: bytes, expected_length: int, message_id: int) -> None:
-    if len(payload) != expected_length:
-        raise MavlinkDecodeError(
-            f"MAVLink frame {message_id} has invalid payload length."
-        )
+def _coerce_payload_length(
+    payload: bytes,
+    expected_length: int,
+    message_id: int,
+) -> bytes:
+    if len(payload) >= expected_length:
+        return payload[:expected_length]
+    return payload.ljust(expected_length, b"\x00")
 
 
 def _drone_id(system_id: int) -> str:

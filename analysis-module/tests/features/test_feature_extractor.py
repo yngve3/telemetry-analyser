@@ -95,7 +95,7 @@ class TelemetryFeatureExtractorTest(unittest.TestCase):
 
         self.assertEqual(len(values), len(samples) * len(feature_names))
         self.assertTrue(all(value == value for value in values))
-        self.assertEqual(diagnostics["battery_remaining"], 0.8)
+        self.assertAlmostEqual(diagnostics["battery_remaining"], 0.8)
         self.assertEqual(diagnostics["battery_warning"], 2.0)
         self.assertEqual(diagnostics["fd_critical_failure"], 1.0)
 

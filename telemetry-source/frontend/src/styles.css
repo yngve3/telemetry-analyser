@@ -489,6 +489,17 @@ textarea:focus-visible {
   margin-top: 14px;
 }
 
+.source-action-row {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.source-action-row button {
+  margin-right: 0;
+}
+
 .primary-button,
 .secondary-button,
 .danger-button,
@@ -536,6 +547,11 @@ textarea:focus-visible {
   width: 36px;
   background: #e8eef6;
   color: #27364a;
+}
+
+.danger-icon-button {
+  background: #f5dedd;
+  color: #8a2e2b;
 }
 
 .primary-button:disabled,

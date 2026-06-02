@@ -7,6 +7,7 @@ import {
   cleanupPipeline,
   createAnalysisSession,
   createListener,
+  createMission,
   deleteJson,
   env,
   findAnomaly,
@@ -14,6 +15,7 @@ import {
   hybridWithoutAutoencoderProfile,
   injectAnomaly,
   listenerPort,
+  postJson,
   ruleBasedProfile,
   sendUdpPacket,
   startPipeline,
@@ -1031,6 +1033,160 @@ test.describe("Backend E2E", () => {
       expect(result.detector_outputs).toHaveProperty("isolation_forest");
       expect(result.detector_outputs).not.toHaveProperty("autoencoder");
     } finally {
+      await deleteJson(
+        request,
+        `${env.analysisBaseUrl}/analysis/sessions/${sessionId}`,
+      );
+    }
+  });
+
+  test("external source receives UDP packets on compose default port", async ({
+    request,
+  }) => {
+    const createdSource = await postJson(
+      request,
+      `${env.sourceBaseUrl}/sources/external`,
+      {
+        name: uniqueId("external-mavlink"),
+      },
+      201,
+    );
+    const sourceId = createdSource.source_id;
+    const status = createdSource.status;
+
+    expect(status.address).toBe("0.0.0.0");
+    expect(status.port).toBe(14540);
+
+    try {
+      const started = await postJson(
+        request,
+        `${env.sourceBaseUrl}/sources/external/${sourceId}/start`,
+        {},
+      );
+      expect(started.is_active).toBe(true);
+
+      await sendUdpPacket(
+        new URL(env.sourceBaseUrl).hostname,
+        14540,
+        "mavlink-frame",
+      );
+      const received = await waitForValue(
+        async () =>
+          getJson(request, `${env.sourceBaseUrl}/sources/external/${sourceId}`),
+        (payload) => payload.received_packets >= 1,
+        "external source to receive UDP packet",
+      );
+
+      expect(received.received_bytes).toBeGreaterThan(0);
+      expect(received.last_payload_size).toBe("mavlink-frame".length);
+      expect(received.last_error).toBeFalsy();
+    } finally {
+      await postJson(
+        request,
+        `${env.sourceBaseUrl}/sources/external/${sourceId}/stop`,
+        {},
+      );
+    }
+  });
+
+  test("external source forwards MAVLink stream into analysis listener", async (
+    { request },
+    testInfo,
+  ) => {
+    const sessionId = uniqueId("external-forward");
+    const analysisPort = listenerPort(testInfo);
+    const externalPort = listenerPort(testInfo) + 500;
+    let listenerId = null;
+    let sourceId = null;
+    let streamId = null;
+
+    try {
+      await createAnalysisSession(request, {
+        sessionId,
+        profile: ruleBasedProfile(),
+      });
+      const listener = await createListener(request, sessionId, analysisPort);
+      listenerId = listener.listener_id;
+      await waitForValue(
+        async () =>
+          getJson(request, `${env.analysisBaseUrl}/analysis/listeners/${listenerId}`),
+        (payload) => payload.status === "active",
+        "external forward listener to become active",
+      );
+
+      const createdSource = await postJson(
+        request,
+        `${env.sourceBaseUrl}/sources/external`,
+        {
+          name: uniqueId("external-forward"),
+          address: "0.0.0.0",
+          port: externalPort,
+          protocol: "udp",
+          forward_enabled: true,
+          forward_host: env.streamTargetHost,
+          forward_port: analysisPort,
+        },
+        201,
+      );
+      sourceId = createdSource.source_id;
+      await postJson(
+        request,
+        `${env.sourceBaseUrl}/sources/external/${sourceId}/start`,
+        {},
+      );
+
+      const mission = await createMission(request, uniqueId("external-mission"));
+      const stream = await postJson(
+        request,
+        `${env.sourceBaseUrl}/streams/synthetic/missions/${mission.mission_id}/udp`,
+        {
+          host: "127.0.0.1",
+          port: externalPort,
+          frequency_hz: 20,
+        },
+        201,
+      );
+      streamId = stream.stream_id;
+
+      const source = await waitForValue(
+        async () =>
+          getJson(request, `${env.sourceBaseUrl}/sources/external/${sourceId}`),
+        (payload) =>
+          payload.received_packets > 0 &&
+          payload.forwarded_packets > 0 &&
+          Boolean(payload.last_payload_preview_hex),
+        "external source forwarded stream",
+      );
+      const listenerStatus = await waitForListenerSamples(request, listenerId);
+      const result = await waitForLastResult(
+        request,
+        sessionId,
+        (payload) => Boolean(payload.detector_outputs?.rule_based),
+      );
+
+      expect(source.received_packets).toBeGreaterThan(0);
+      expect(source.forwarded_packets).toBeGreaterThan(0);
+      expect(source.last_forward_error).toBeFalsy();
+      expect(listenerStatus.received_packets).toBeGreaterThan(0);
+      expect(listenerStatus.converted_samples).toBeGreaterThan(0);
+      expect(result.detector_outputs).toHaveProperty("rule_based");
+    } finally {
+      if (streamId) {
+        await deleteJson(request, `${env.sourceBaseUrl}/streams/udp/${streamId}`);
+      }
+      if (sourceId) {
+        await postJson(
+          request,
+          `${env.sourceBaseUrl}/sources/external/${sourceId}/stop`,
+          {},
+        );
+      }
+      if (listenerId) {
+        await deleteJson(
+          request,
+          `${env.analysisBaseUrl}/analysis/listeners/${listenerId}`,
+        );
+      }
       await deleteJson(
         request,
         `${env.analysisBaseUrl}/analysis/sessions/${sessionId}`,

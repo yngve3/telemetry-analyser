@@ -24,6 +24,19 @@ The repository is organized as independent modules connected through shared cont
 
 ## Running Tests
 
+Run the full repository check, including Python unit tests, frontend tests/builds,
+Docker Compose startup, and Playwright E2E tests:
+
+```powershell
+bash tools/run-all-tests.sh
+```
+
+The task uses Python 3.11 by default. Override it if needed:
+
+```powershell
+PYTHON_VERSION=3.14 bash tools/run-all-tests.sh
+```
+
 Module-level unit and integration tests:
 
 ```powershell
@@ -81,6 +94,7 @@ Services:
 - telemetry source frontend: http://127.0.0.1:3000
 - telemetry source backend: http://127.0.0.1:8000
 - backend Swagger UI: http://127.0.0.1:8000/docs
+- telemetry source external UDP ingress: 0.0.0.0:14540/udp
 
 Frontend development with the Vite dev server:
 

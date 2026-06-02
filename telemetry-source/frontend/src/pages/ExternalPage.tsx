@@ -4,11 +4,12 @@ import {
   useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query";
-import { Play, Plus, Square } from "lucide-react";
+import { Play, Plus, Square, Trash2 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 
 import {
   createExternalSource,
+  deleteExternalSource,
   getExternalSourceStatus,
   listExternalSources,
   startExternalSource,
@@ -17,14 +18,18 @@ import {
 import type { ExternalSourceCreateRequest } from "../shared/api/types";
 import { useI18n } from "../shared/i18n/I18nProvider";
 import { EmptyState } from "../shared/ui/EmptyState";
+import { JsonPreview } from "../shared/ui/JsonPreview";
 import { StatusPill } from "../shared/ui/StatusPill";
 import { validatePort } from "../shared/validation/forms";
 
 const initialForm: ExternalSourceCreateRequest = {
   name: "external_mavlink",
-  address: "127.0.0.1",
-  port: 14560,
+  address: "0.0.0.0",
+  port: 14540,
   protocol: "udp",
+  forward_enabled: true,
+  forward_host: "analysis-service",
+  forward_port: 14560,
 };
 
 export function ExternalPage() {
@@ -63,6 +68,18 @@ export function ExternalPage() {
   const stopMutation = useMutation({
     mutationFn: stopExternalSource,
     onSuccess: (response) => invalidateExternalQueries(queryClient, response.source_id),
+  });
+  const deleteMutation = useMutation({
+    mutationFn: deleteExternalSource,
+    onSuccess: (response) => {
+      if (selectedSourceId === response.source_id) {
+        setSelectedSourceId(null);
+      }
+      void queryClient.invalidateQueries({ queryKey: ["external-sources"] });
+      void queryClient.removeQueries({
+        queryKey: ["external-source", response.source_id],
+      });
+    },
   });
 
   useEffect(() => {
@@ -221,24 +238,40 @@ export function ExternalPage() {
                     </td>
                     <td>{source.received_packets}</td>
                     <td>
-                      <button
-                        className="secondary-button"
-                        disabled={startMutation.isPending || source.is_active}
-                        onClick={() => startMutation.mutate(source.source_id)}
-                        type="button"
-                      >
-                        <Play size={16} />
-                        {t("common.start", "Start")}
-                      </button>
-                      <button
-                        className="danger-button"
-                        disabled={stopMutation.isPending || !source.is_active}
-                        onClick={() => stopMutation.mutate(source.source_id)}
-                        type="button"
-                      >
-                        <Square size={16} />
-                        {t("common.stop", "Stop")}
-                      </button>
+                      <div className="source-action-row">
+                        <button
+                          aria-label={
+                            source.is_active
+                              ? t("common.stop", "Stop")
+                              : t("common.start", "Start")
+                          }
+                          className="icon-button"
+                          disabled={startMutation.isPending || stopMutation.isPending}
+                          onClick={() =>
+                            source.is_active
+                              ? stopMutation.mutate(source.source_id)
+                              : startMutation.mutate(source.source_id)
+                          }
+                          title={
+                            source.is_active
+                              ? t("common.stop", "Stop")
+                              : t("common.start", "Start")
+                          }
+                          type="button"
+                        >
+                          {source.is_active ? <Square size={16} /> : <Play size={16} />}
+                        </button>
+                        <button
+                          aria-label={t("common.delete", "Delete")}
+                          className="icon-button danger-icon-button"
+                          disabled={deleteMutation.isPending}
+                          onClick={() => deleteMutation.mutate(source.source_id)}
+                          title={t("common.delete", "Delete")}
+                          type="button"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -277,6 +310,18 @@ export function ExternalPage() {
                   value={selectedSourceQuery.data.received_bytes}
                 />
                 <Metric
+                  label={t("external.forwardedPackets", "Forwarded packets")}
+                  value={selectedSourceQuery.data.forwarded_packets}
+                />
+                <Metric
+                  label={t("external.forwardTarget", "Forward target")}
+                  value={
+                    selectedSourceQuery.data.forward_enabled
+                      ? `${selectedSourceQuery.data.forward_host}:${selectedSourceQuery.data.forward_port}`
+                      : "-"
+                  }
+                />
+                <Metric
                   label={t("external.lastPayload", "Last payload")}
                   value={selectedSourceQuery.data.last_payload_size ?? "-"}
                 />
@@ -289,6 +334,19 @@ export function ExternalPage() {
                   }
                 />
               </div>
+              <PayloadPreview source={selectedSourceQuery.data} />
+              {selectedSourceQuery.data.last_error ? (
+                <div className="message error">
+                  {t("external.lastError", "Last error")}:{" "}
+                  {selectedSourceQuery.data.last_error}
+                </div>
+              ) : null}
+              {selectedSourceQuery.data.last_forward_error ? (
+                <div className="message error">
+                  {t("external.lastForwardError", "Last forward error")}:{" "}
+                  {selectedSourceQuery.data.last_forward_error}
+                </div>
+              ) : null}
             </div>
           ) : (
             <EmptyState label={t("external.noSourceSelected", "No source selected")} />
@@ -300,8 +358,46 @@ export function ExternalPage() {
           {stopMutation.error ? (
             <div className="message error">{stopMutation.error.message}</div>
           ) : null}
+          {deleteMutation.error ? (
+            <div className="message error">{deleteMutation.error.message}</div>
+          ) : null}
         </section>
       </div>
+    </div>
+  );
+}
+
+function PayloadPreview({
+  source,
+}: {
+  source: {
+    last_payload_preview_ascii?: string | null;
+    last_payload_preview_hex?: string | null;
+    last_payload_preview_truncated?: boolean;
+  };
+}) {
+  const { t } = useI18n();
+  if (!source.last_payload_preview_hex) {
+    return (
+      <div className="message">
+        {t("external.payloadPreviewEmpty", "No payload received yet")}
+      </div>
+    );
+  }
+  return (
+    <div className="preview-stack">
+      <div className="preview-heading">
+        <strong>{t("external.payloadPreview", "Payload preview")}</strong>
+        {source.last_payload_preview_truncated ? (
+          <StatusPill label="truncated" tone="warning" />
+        ) : null}
+      </div>
+      <JsonPreview
+        value={{
+          hex: source.last_payload_preview_hex,
+          ascii: source.last_payload_preview_ascii,
+        }}
+      />
     </div>
   );
 }

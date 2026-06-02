@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import socket
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
@@ -13,7 +13,7 @@ from telemetry_source_backend.domain.external.models import (
     ExternalTelemetryPacket,
 )
 
-PacketHandler = Callable[[ExternalTelemetryPacket], None]
+PacketHandler = Callable[[ExternalTelemetryPacket], Awaitable[None] | None]
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,13 +43,14 @@ class ExternalUdpTelemetrySource:
                 except socket.timeout:
                     continue
 
-                on_packet(
-                    ExternalTelemetryPacket(
-                        received_at=datetime.now(tz=UTC),
-                        payload=payload,
-                        remote_address=remote[0],
-                        remote_port=remote[1],
-                    )
+                packet = ExternalTelemetryPacket(
+                    received_at=datetime.now(tz=UTC),
+                    payload=payload,
+                    remote_address=remote[0],
+                    remote_port=remote[1],
                 )
+                result = on_packet(packet)
+                if result is not None:
+                    await result
         finally:
             sock.close()

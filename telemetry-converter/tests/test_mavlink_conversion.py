@@ -18,11 +18,14 @@ from telemetry_converter import (  # noqa: E402
 )
 from telemetry_source_backend.domain.common.models import TelemetrySample  # noqa: E402
 from telemetry_source_backend.infrastructure.encoders.mavlink_encoder import (  # noqa: E402
+    ATTITUDE_CRC_EXTRA,
     ATTITUDE_MSG_ID,
+    GPS_RAW_INT_CRC_EXTRA,
     GPS_RAW_INT_MSG_ID,
     GLOBAL_POSITION_INT_MSG_ID,
     HEARTBEAT_MSG_ID,
     MavlinkTelemetryEncoder,
+    SYS_STATUS_CRC_EXTRA,
     SYS_STATUS_MSG_ID,
 )
 from telemetry_source_backend.infrastructure.contracts.telemetry_contract import (  # noqa: E402
@@ -148,6 +151,127 @@ class MavlinkConversionTest(unittest.TestCase):
         self.assertAlmostEqual(status_output.latitude_deg, 47.5)
         self.assertEqual(status_output.battery_percent, 80.0)
 
+    def test_stream_decoder_accepts_mavlink_v2_truncated_payload(self) -> None:
+        encoder = MavlinkTelemetryEncoder(system_id=1, component_id=1)
+        decoder = default_mavlink_stream_decoder()
+        initial_sample = self._sample()
+
+        for frame in encoder.encode_messages_for_ids(
+            initial_sample,
+            (
+                HEARTBEAT_MSG_ID,
+                ATTITUDE_MSG_ID,
+                GLOBAL_POSITION_INT_MSG_ID,
+                GPS_RAW_INT_MSG_ID,
+                SYS_STATUS_MSG_ID,
+            ),
+        ):
+            decoder.update(frame)
+
+        truncated_attitude_frame = _truncate_mavlink_v2_payload(
+            encoder.encode_message(
+                self._sample(
+                    timestamp=datetime(2026, 5, 20, 12, 0, 1, tzinfo=UTC),
+                    yaw_rad=0.0,
+                ),
+                ATTITUDE_MSG_ID,
+            ),
+            crc_extra=ATTITUDE_CRC_EXTRA,
+        )
+        output = decoder.update(truncated_attitude_frame)
+
+        self.assertIsNotNone(output)
+        self.assertAlmostEqual(output.yaw_rad or 0.0, 0.0)
+        self.assertLess(truncated_attitude_frame[1], 28)
+
+    def test_stream_decoder_ignores_mavlink_v2_extension_payload(self) -> None:
+        encoder = MavlinkTelemetryEncoder(system_id=1, component_id=1)
+        decoder = default_mavlink_stream_decoder()
+        sample = self._sample()
+        frames = encoder.encode_messages_for_ids(
+            sample,
+            (
+                HEARTBEAT_MSG_ID,
+                ATTITUDE_MSG_ID,
+                GLOBAL_POSITION_INT_MSG_ID,
+                GPS_RAW_INT_MSG_ID,
+                SYS_STATUS_MSG_ID,
+            ),
+        )
+        frames = (
+            *frames[:3],
+            _extend_mavlink_v2_payload(
+                frames[3],
+                extension_payload=b"\x00\x00\x00\x00",
+                crc_extra=GPS_RAW_INT_CRC_EXTRA,
+            ),
+            frames[4],
+        )
+
+        outputs = [decoder.update(frame) for frame in frames]
+        output = outputs[-1]
+
+        self.assertIsNotNone(output)
+        self.assertEqual(output.satellites, 10)
+        self.assertEqual(frames[3][1], 34)
+
+    def test_stream_decoder_uses_current_time_for_boot_time_gps_timestamp(self) -> None:
+        encoder = MavlinkTelemetryEncoder(system_id=1, component_id=1)
+        decoder = default_mavlink_stream_decoder()
+        frames = encoder.encode_messages_for_ids(
+            self._sample(),
+            (
+                HEARTBEAT_MSG_ID,
+                ATTITUDE_MSG_ID,
+                GLOBAL_POSITION_INT_MSG_ID,
+                GPS_RAW_INT_MSG_ID,
+                SYS_STATUS_MSG_ID,
+            ),
+        )
+        frames = (
+            *frames[:3],
+            _set_gps_raw_int_timestamp_usec(
+                frames[3],
+                timestamp_usec=4_000_000,
+            ),
+            frames[4],
+        )
+
+        outputs = [decoder.update(frame) for frame in frames]
+        output = outputs[-1]
+
+        self.assertIsNotNone(output)
+        self.assertGreaterEqual(output.timestamp.year, 2000)
+        self.assertNotEqual(output.timestamp.year, 1970)
+
+    def test_stream_decoder_omits_unknown_mavlink_battery_current(self) -> None:
+        encoder = MavlinkTelemetryEncoder(system_id=1, component_id=1)
+        decoder = default_mavlink_stream_decoder()
+        frames = encoder.encode_messages_for_ids(
+            self._sample(),
+            (
+                HEARTBEAT_MSG_ID,
+                ATTITUDE_MSG_ID,
+                GLOBAL_POSITION_INT_MSG_ID,
+                GPS_RAW_INT_MSG_ID,
+                SYS_STATUS_MSG_ID,
+            ),
+        )
+        frames = (
+            *frames[:-1],
+            _set_sys_status_current_battery(
+                frames[-1],
+                current_battery_ca=-1,
+            ),
+        )
+
+        outputs = [decoder.update(frame) for frame in frames]
+        output = outputs[-1]
+
+        self.assertIsNotNone(output)
+        self.assertIsNone(output.battery_current_a)
+        self.assertEqual(output.battery_percent, 90.0)
+
     def _sample(
         self,
         timestamp: datetime = datetime(2026, 5, 20, 12, 0, tzinfo=UTC),
@@ -181,6 +305,67 @@ class MavlinkConversionTest(unittest.TestCase):
             armed=True,
             sensor_health_flags=0xFFFFFFFF,
         )
+
+
+def _truncate_mavlink_v2_payload(frame: bytes, crc_extra: int) -> bytes:
+    payload_length = frame[1]
+    header = bytearray(frame[:10])
+    payload = frame[10 : 10 + payload_length]
+    truncated_payload = payload.rstrip(b"\x00")
+    header[1] = len(truncated_payload)
+    checksum = _x25_crc(bytes(header[1:]) + truncated_payload + bytes([crc_extra]))
+    return bytes(header) + truncated_payload + checksum.to_bytes(2, "little")
+
+
+def _set_gps_raw_int_timestamp_usec(
+    frame: bytes,
+    timestamp_usec: int,
+) -> bytes:
+    payload_length = frame[1]
+    header = frame[:10]
+    payload = bytearray(frame[10 : 10 + payload_length])
+    payload[:8] = timestamp_usec.to_bytes(8, "little")
+    checksum = _x25_crc(header[1:] + bytes(payload) + bytes([GPS_RAW_INT_CRC_EXTRA]))
+    return header + bytes(payload) + checksum.to_bytes(2, "little")
+
+
+def _set_sys_status_current_battery(
+    frame: bytes,
+    current_battery_ca: int,
+) -> bytes:
+    payload_length = frame[1]
+    header = frame[:10]
+    payload = bytearray(frame[10 : 10 + payload_length])
+    payload[16:18] = current_battery_ca.to_bytes(2, "little", signed=True)
+    checksum = _x25_crc(header[1:] + bytes(payload) + bytes([SYS_STATUS_CRC_EXTRA]))
+    return header + bytes(payload) + checksum.to_bytes(2, "little")
+
+
+def _extend_mavlink_v2_payload(
+    frame: bytes,
+    extension_payload: bytes,
+    crc_extra: int,
+) -> bytes:
+    payload_length = frame[1]
+    header = bytearray(frame[:10])
+    payload = frame[10 : 10 + payload_length] + extension_payload
+    header[1] = len(payload)
+    checksum = _x25_crc(bytes(header[1:]) + payload + bytes([crc_extra]))
+    return bytes(header) + payload + checksum.to_bytes(2, "little")
+
+
+def _x25_crc(data: bytes) -> int:
+    crc = 0xFFFF
+    for byte in data:
+        tmp = byte ^ (crc & 0xFF)
+        tmp = (tmp ^ (tmp << 4)) & 0xFF
+        crc = (
+            (crc >> 8)
+            ^ (tmp << 8)
+            ^ (tmp << 3)
+            ^ (tmp >> 4)
+        ) & 0xFFFF
+    return crc
 
 
 if __name__ == "__main__":

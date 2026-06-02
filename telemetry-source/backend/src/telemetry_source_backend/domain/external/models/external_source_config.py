@@ -15,3 +15,6 @@ class ExternalSourceConfig:
     address: str
     port: int
     protocol: ExternalTransportProtocol = ExternalTransportProtocol.UDP
+    forward_enabled: bool = True
+    forward_host: str = "analysis-service"
+    forward_port: int = 14560

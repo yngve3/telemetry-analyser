@@ -290,7 +290,8 @@ export interface paths {
         get: operations["get_external_source_status_sources_external__source_id__get"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete external UDP telemetry source */
+        delete: operations["delete_external_source_sources_external__source_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -551,19 +552,44 @@ export interface components {
             name: string;
             /**
              * Address
-             * @default 127.0.0.1
+             * @default 0.0.0.0
              */
             address: string;
-            /** Port */
+            /**
+             * Port
+             * @default 14540
+             */
             port: number;
             /** @default udp */
             protocol: components["schemas"]["ExternalTransportProtocol"];
+            /**
+             * Forward Enabled
+             * @default true
+             */
+            forward_enabled: boolean;
+            /**
+             * Forward Host
+             * @default analysis-service
+             */
+            forward_host: string;
+            /**
+             * Forward Port
+             * @default 14560
+             */
+            forward_port: number;
         };
         /** ExternalSourceCreatedResponse */
         ExternalSourceCreatedResponse: {
             /** Source Id */
             source_id: string;
             status: components["schemas"]["ExternalSourceStatusResponse"];
+        };
+        /** ExternalSourceDeletedResponse */
+        ExternalSourceDeletedResponse: {
+            /** Source Id */
+            source_id: string;
+            /** Deleted */
+            deleted: boolean;
         };
         /** ExternalSourceListItemResponse */
         ExternalSourceListItemResponse: {
@@ -577,10 +603,18 @@ export interface components {
             port: number;
             /** Protocol */
             protocol: string;
+            /** Forward Enabled */
+            forward_enabled: boolean;
+            /** Forward Host */
+            forward_host: string;
+            /** Forward Port */
+            forward_port: number;
             /** Is Active */
             is_active: boolean;
             /** Received Packets */
             received_packets: number;
+            /** Forwarded Packets */
+            forwarded_packets: number;
         };
         /** ExternalSourceStatusResponse */
         ExternalSourceStatusResponse: {
@@ -594,20 +628,40 @@ export interface components {
             port: number;
             /** Protocol */
             protocol: string;
+            /** Forward Enabled */
+            forward_enabled: boolean;
+            /** Forward Host */
+            forward_host: string;
+            /** Forward Port */
+            forward_port: number;
             /** Is Active */
             is_active: boolean;
             /** Received Packets */
             received_packets: number;
             /** Received Bytes */
             received_bytes: number;
+            /** Forwarded Packets */
+            forwarded_packets: number;
             /** Last Received At */
             last_received_at?: string | null;
+            /** Last Forwarded At */
+            last_forwarded_at?: string | null;
             /** Last Remote Address */
             last_remote_address?: string | null;
             /** Last Remote Port */
             last_remote_port?: number | null;
             /** Last Payload Size */
             last_payload_size?: number | null;
+            /** Last Payload Preview Hex */
+            last_payload_preview_hex?: string | null;
+            /** Last Payload Preview Ascii */
+            last_payload_preview_ascii?: string | null;
+            /** Last Payload Preview Truncated */
+            last_payload_preview_truncated?: boolean;
+            /** Last Error */
+            last_error?: string | null;
+            /** Last Forward Error */
+            last_forward_error?: string | null;
         };
         /**
          * ExternalTransportProtocol
@@ -1049,12 +1103,12 @@ export interface components {
         UdpStreamRequest: {
             /**
              * Host
-             * @default 127.0.0.1
+             * @default analysis-service
              */
             host: string;
             /**
              * Port
-             * @default 14550
+             * @default 14560
              */
             port: number;
             /** Frequency Hz */
@@ -1687,6 +1741,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ExternalSourceStatusResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_external_source_sources_external__source_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExternalSourceDeletedResponse"];
                 };
             };
             /** @description Validation Error */

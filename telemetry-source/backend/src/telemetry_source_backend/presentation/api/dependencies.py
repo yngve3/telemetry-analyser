@@ -91,6 +91,7 @@ class ExternalSourceRuntimeDependencies:
     """Dependencies needed to receive packets from an external source."""
 
     receiver: ExternalUdpTelemetrySource
+    forward_transport: TelemetryTransport | None = None
 
 
 @lru_cache(maxsize=1)
@@ -191,8 +192,17 @@ def get_external_runtime_dependencies(
 ) -> ExternalSourceRuntimeDependencies | None:
     if record is None:
         return None
+    forward_transport = (
+        UdpTelemetryTransport(
+            record.config.forward_host,
+            record.config.forward_port,
+        )
+        if record.config.forward_enabled
+        else None
+    )
     return ExternalSourceRuntimeDependencies(
-        receiver=ExternalUdpTelemetrySource(record.config)
+        receiver=ExternalUdpTelemetrySource(record.config),
+        forward_transport=forward_transport,
     )
 
 

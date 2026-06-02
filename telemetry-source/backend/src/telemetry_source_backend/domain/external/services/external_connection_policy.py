@@ -19,3 +19,8 @@ class ExternalConnectionPolicy:
             raise SourceConfigurationError("External source port must be in 1..65535.")
         if config.protocol is not ExternalTransportProtocol.UDP:
             raise SourceConfigurationError("Only UDP external sources are supported.")
+        if config.forward_enabled:
+            if not config.forward_host.strip():
+                raise SourceConfigurationError("Forward host must not be empty.")
+            if not 1 <= config.forward_port <= 65535:
+                raise SourceConfigurationError("Forward port must be in 1..65535.")

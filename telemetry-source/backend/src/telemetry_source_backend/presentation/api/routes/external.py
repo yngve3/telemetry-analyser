@@ -1,10 +1,12 @@
 """External source routes."""
 
 import asyncio
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, HTTPException, status
 
 from telemetry_source_backend.domain.exceptions import SourceConfigurationError
+from telemetry_source_backend.domain.external.models import ExternalTelemetryPacket
 from telemetry_source_backend.infrastructure.persistence.in_memory_external_source_registry import (
     ExternalSourceRecord,
 )
@@ -25,6 +27,7 @@ from telemetry_source_backend.presentation.api.schemas.external_requests import 
 )
 from telemetry_source_backend.presentation.api.schemas.external_responses import (
     ExternalSourceCreatedResponse,
+    ExternalSourceDeletedResponse,
     ExternalSourceListItemResponse,
     ExternalSourceStatusResponse,
 )
@@ -105,6 +108,8 @@ async def start_external_source(
         return external_source_status_response(source)
 
     source.stop_event.clear()
+    source.last_error = None
+    source.last_forward_error = None
     source.is_active = True
     source.task = asyncio.create_task(
         _run_external_receiver(source, runtime)
@@ -121,15 +126,23 @@ async def stop_external_source(
     record: ExternalSourceRecordDep,
 ) -> ExternalSourceStatusResponse:
     source = _record_or_404(record)
-    source.stop_event.set()
-    if source.task is not None:
-        source.task.cancel()
-        try:
-            await source.task
-        except asyncio.CancelledError:
-            pass
-    source.is_active = False
+    await _stop_source_task(source)
     return external_source_status_response(source)
+
+
+@router.delete(
+    "/{source_id}",
+    response_model=ExternalSourceDeletedResponse,
+    summary="Delete external UDP telemetry source",
+)
+async def delete_external_source(
+    source_id: str,
+    registry: ExternalSourceRegistryDep,
+) -> ExternalSourceDeletedResponse:
+    source = registry.delete(source_id)
+    _record_or_404(source)
+    await _stop_source_task(source)
+    return ExternalSourceDeletedResponse(source_id=source_id, deleted=True)
 
 
 async def _run_external_receiver(
@@ -140,11 +153,44 @@ async def _run_external_receiver(
         record.is_active = False
         return
     try:
-        await runtime.receiver.receive_loop(record.stop_event, record.observe)
+        await runtime.receiver.receive_loop(
+            record.stop_event,
+            lambda packet: _handle_external_packet(record, runtime, packet),
+        )
     except asyncio.CancelledError:
         raise
+    except OSError as exc:
+        record.last_error = str(exc)
     finally:
         record.is_active = False
+
+
+async def _handle_external_packet(
+    record: ExternalSourceRecord,
+    runtime: ExternalSourceRuntimeDependencies,
+    packet: ExternalTelemetryPacket,
+) -> None:
+    record.observe(packet)
+    if runtime.forward_transport is None:
+        return
+    try:
+        await runtime.forward_transport.send(packet.payload)
+    except OSError as exc:
+        record.observe_forward_error(str(exc))
+        return
+    record.observe_forward(datetime.now(tz=UTC))
+
+
+async def _stop_source_task(source: ExternalSourceRecord) -> None:
+    source.stop_event.set()
+    if source.task is not None:
+        source.task.cancel()
+        try:
+            await source.task
+        except asyncio.CancelledError:
+            pass
+        source.task = None
+    source.is_active = False
 
 
 def _record_or_404(record: ExternalSourceRecord | None) -> ExternalSourceRecord:

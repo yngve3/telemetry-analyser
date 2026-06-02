@@ -90,8 +90,8 @@ POST /streams/synthetic/missions/{mission_id}/udp
 
 ```json
 {
-  "host": "127.0.0.1",
-  "port": 14550,
+  "host": "analysis-service",
+  "port": 14560,
   "frequency_hz": 20
 }
 ```

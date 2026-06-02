@@ -46,3 +46,14 @@ export function stopExternalSource(
     },
   );
 }
+
+export function deleteExternalSource(
+  sourceId: string,
+): Promise<{ source_id: string; deleted: boolean }> {
+  return apiRequest<{ source_id: string; deleted: boolean }>(
+    `/sources/external/${sourceId}`,
+    {
+      method: "DELETE",
+    },
+  );
+}

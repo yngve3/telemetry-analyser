@@ -7,6 +7,7 @@ services:
     container_name: telemetry-source-backend
     ports:
       - "0.0.0.0:8000:8000"
+      - "0.0.0.0:14540:14540/udp"
     healthcheck:
       test:
         [
